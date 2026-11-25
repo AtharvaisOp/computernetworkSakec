@@ -3,7 +3,7 @@ export default {async fetch(request,env){
  const url=new URL(request.url);
  const user=request.headers.get('oai-authenticated-user-id')||'';
  if(url.pathname!=='/progress'){
-  const path=url.pathname==='/'?'/index.html':url.pathname;
+  const path=url.pathname==='/'?'/index.html':(assetAliases[url.pathname]??url.pathname);
   if(!Object.hasOwn(assets,path))return new Response('Page not found',{status:404});
   const type=path.endsWith('.js')?'text/javascript':path.endsWith('.css')?'text/css':'text/html';
   if(path==='/index.html'){

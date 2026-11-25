@@ -69,3 +69,9 @@ test('roadmap opens only the section that holds the resume lecture',()=>{
  assert.equal(read("initialLectureSection(studyModules.m4,{'m4/lastActive':'m4-l11','m4/m4-l11/done':true})"),'Transport Layer Fundamentals');
  assert.equal(read("initialLectureSection(studyModules.m3,Object.fromEntries(studyModules.m3.lectures.map(l=>[key(l,'done'),true])))"),null);
 });
+test('first-view ring numbers start at zero and finish at the saved percentage',()=>{
+ assert.equal(read('progressPercent(10,28)'),36);
+ assert.equal(read('progressFrame(36,0)'),0);
+ assert.ok(read('progressFrame(36,360)')>0&&read('progressFrame(36,360)')<36);
+ assert.equal(read('progressFrame(36,720)'),36);
+});

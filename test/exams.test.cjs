@@ -50,8 +50,9 @@ test('worker serves the rebrand, exam script and old study interface',async()=>{
  assert.match(html,/<title>Exam Planner/);
  assert.match(html,/id="examClock"/);
  assert.match(html,/id="studyWorkspace"/);
- assert.match(html,/src="\/exams.js"/);
- const script=await request('/exams.js');
+ const url=html.match(/src="(\/exams-[0-9a-f]{12}\.js)"/)?.[1];
+ assert.ok(url);
+ const script=await request(url);
  assert.equal(script.status,200);
  assert.match(await script.text(),/Asia\/Kolkata/);
 });
@@ -74,4 +75,17 @@ test('display changes once a second and carries correctly between minutes',()=>{
  assert.deepEqual(Array.from(read('examClockValues(86461)')),[1,0,1,1]);
  assert.deepEqual(Array.from(read('examClockValues(86460)')),[1,0,1,0]);
  assert.deepEqual(Array.from(read('examClockValues(86459)')),[1,0,0,59]);
+});
+test('deadline focus defaults to the next exam and respects selected upcoming and past exams',()=>{
+ const now="2026-11-25T14:00:00+05:30";
+ const expr=(code)=>`(()=>{const now=Date.parse('${now}');return examFocus(getExamPlan(now),'${code}',now)})()`;
+ assert.equal(read(expr('')).exam.code,'C.D.');
+ const selected=read(expr('B.I.'));
+ assert.equal(selected.exam.code,'B.I.');
+ assert.equal(selected.status,'upcoming');
+ assert.equal(selected.seconds,(Date.parse('2026-12-08T11:30:00+05:30')-Date.parse(now))/1000);
+ const past=read(expr('C.D.').replace(now,'2026-11-29T14:00:00+05:30'));
+ assert.equal(past.status,'past');
+ assert.equal(past.seconds,0);
+ assert.equal(read("deadlineSubjectKey(examSchedule[1])"),'cn');
 });

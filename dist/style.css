@@ -182,3 +182,35 @@ footer .accountLink{display:block;text-align:center;margin:0 0 8px}
  .progressStat{gap:5px}
  .progressRing{width:clamp(49px,15vw,64px);--rim:5px}
 }
+
+/* Tinted glass and a quiet rim work in both themes without hiding the number. */
+.progressRing{box-shadow:0 0 12px color-mix(in srgb,var(--green) 22%,transparent),inset 0 0 0 1px color-mix(in srgb,var(--surface) 40%,transparent)}
+.progressRing:before{background:linear-gradient(155deg,color-mix(in srgb,var(--surface) 88%,var(--active)),var(--surface) 70%);box-shadow:inset 0 1px 2px color-mix(in srgb,var(--green) 18%,transparent)}
+.studyTimer{background:color-mix(in srgb,var(--surface) 90%,var(--active));border-color:color-mix(in srgb,var(--green) 29%,var(--line))}
+.examSpotlight{background:#143e34;border:1px solid #376554}.examClock>div{background:#265548}
+html.dark .examSpotlight{background:#183e32;border-color:#4c7560}
+footer .themeToggle{position:relative;display:grid;place-items:center;width:48px;height:48px;min-width:48px;padding:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;color:var(--green);overflow:hidden}
+.themeToggle:focus-visible{outline:2px solid var(--green)}
+.themeGlyph{grid-area:1/1;display:grid;place-items:center;transition:transform .24s ease,opacity .2s ease}
+.themeGlyph svg{height:25px;width:25px}
+.themeSun{opacity:0;transform:rotate(-32deg) scale(.72)}
+html.dark .themeSun{opacity:1;transform:rotate(0) scale(1)}
+html.dark .themeMoon{opacity:0;transform:rotate(32deg) scale(.65)}
+@media(prefers-reduced-motion:reduce){.themeGlyph{transition:none}}
+.examListHeading>span{margin-left:auto}
+.examListHeading .quiet{min-height:34px;border:1px solid var(--line)}
+.examListHeading .quiet[aria-pressed=true]{background:var(--active);color:var(--green)}
+.examList li{padding:0}
+.examChoice{display:flex;justify-content:space-between;align-items:center;gap:10px;width:100%;padding:10px 13px;text-align:left;border:0;border-radius:11px;background:transparent}
+.examChoice[aria-pressed=true]{box-shadow:inset 0 0 0 1.5px var(--green);background:color-mix(in srgb,var(--surface) 91%,var(--active))}
+.examChoice:focus-visible,#defaultDeadline:focus-visible{outline:2px solid var(--green)}
+.examStudyLink[hidden]{display:none}
+:root{--timer-bg:#143e34;--timer-border:#376554;--timer-text:#f5f7eb;--timer-muted:#cce0d2;--timer-accent:#d3e7ac;--timer-inset:#265548}
+html.dark{--timer-bg:#183e32;--timer-border:#4c7560;--timer-inset:#285546}
+.examSpotlight,.studyTimer{background:var(--timer-bg);border-color:var(--timer-border);color:var(--timer-text)}
+html.dark .examSpotlight{background:var(--timer-bg);border-color:var(--timer-border)}
+.examClock>div,.studyTimerIcon{background:var(--timer-inset)}
+.examKicker,.studyTimerClock b,.studyTimerIcon{color:var(--timer-accent)}
+.examLead p,.studyTimerLabel,.studyTimerClock small{color:var(--timer-muted)}
+.studyTimerClock>span+span{border-color:var(--timer-border)}
+.studyTimerExam:focus-visible{outline-color:var(--timer-accent)}

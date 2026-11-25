@@ -80,3 +80,11 @@ function youtubeEmbed(l,origin,position=0){
  if(l.endSeconds!=null)url.searchParams.set('end',String(l.endSeconds));
  return url.href;
 }
+
+function progressPercent(done,total){
+ return Math.max(0,Math.min(100,total?Math.round(100*done/total):0));
+}
+function progressFrame(value,elapsed){
+ const t=Math.max(0,Math.min(1,elapsed/720));
+ return Math.min(value,Math.floor(value*(1-(1-t)**3)+Number.EPSILON));
+}

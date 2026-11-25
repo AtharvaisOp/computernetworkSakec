@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id);
-const shapes={book:'M3 4q4-1 9 2 5-3 9-2v15q-5-1-9 2-4-3-9-2z M12 6v15',road:'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',list:'M9 6h12 M9 12h12 M9 18h12 M3 6l1 1 2-3 M3 12h2 M3 18h2',practice:'M5 3h14v18H5z M8 7h8 M8 12h2 M14 12h2 M8 16h2 M14 16h2',flag:'M6 21V4h12l-3 5 3 5H6',settings:'M4 7h16 M4 17h16 M9 4v6 M15 14v6',file:'M6 2h8l4 4v16H6z M9 11h6 M9 15h6',play:'m7 4 13 8-13 8z',clock:'M12 3a9 9 0 1 0 .01 0 M12 7v6l4 2',check:'m4 12 5 5L20 6',chart:'M3 20h18 M6 16v-4 M12 16V8 M18 16V4',find:'M10 3a7 7 0 1 0 .01 0 M15 15l6 6',down:'m6 9 6 6 6-6',right:'m9 6 6 6-6 6',bookmark:'M6 3h12v18l-6-4-6 4z',note:'M4 4h16v12l-5 5H4z M8 9h8 M8 13h5',moon:'M20 15A9 9 0 0 1 9 3a9 9 0 1 0 11 12z'};
+const shapes={book:'M3 4q4-1 9 2 5-3 9-2v15q-5-1-9 2-4-3-9-2z M12 6v15',road:'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',list:'M9 6h12 M9 12h12 M9 18h12 M3 6l1 1 2-3 M3 12h2 M3 18h2',practice:'M5 3h14v18H5z M8 7h8 M8 12h2 M14 12h2 M8 16h2 M14 16h2',flag:'M6 21V4h12l-3 5 3 5H6',settings:'M4 7h16 M4 17h16 M9 4v6 M15 14v6',file:'M6 2h8l4 4v16H6z M9 11h6 M9 15h6',play:'m7 4 13 8-13 8z',clock:'M12 3a9 9 0 1 0 .01 0 M12 7v6l4 2',check:'m4 12 5 5L20 6',chart:'M3 20h18 M6 16v-4 M12 16V8 M18 16V4',find:'M10 3a7 7 0 1 0 .01 0 M15 15l6 6',down:'m6 9 6 6 6-6',right:'m9 6 6 6-6 6',bookmark:'M6 3h12v18l-6-4-6 4z',note:'M4 4h16v12l-5 5H4z M8 9h8 M8 13h5',moon:'M20 15A9 9 0 0 1 9 3a9 9 0 1 0 11 12z',sun:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M12 3v2 M12 19v2 M3 12h2 M19 12h2 M5.6 5.6l1.5 1.5 M17 17l1.5 1.5 M5.6 18.4l1.5-1.5 M17 7l1.5-1.5'};
 const icon=n=>'<svg aria-hidden="true" viewBox="0 0 24 24"><path d="'+shapes[n]+'"/></svg>';
 document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon));
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -48,17 +48,39 @@ const link=l=>youtubeWatch(l);
 const options=(values,current,suffix='')=>values.map(v=>'<option '+(v===current?'selected':'')+' value="'+esc(v)+'">'+esc(v)+suffix+'</option>').join('');
 const bar=(n,total)=>'<div class="bar"><i style="width:'+100*n/total+'%"></i></div>';
 const topicMatch=(l,id)=>l.topicIds.includes(id);
-function progressRing(done,total){
- const value=Math.max(0,Math.min(100,total?Math.round(100*done/total):0));
- return '<div class="progressRing" role="progressbar" aria-label="Overall progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+value+'" style="--percent:'+value+'%"><strong>'+value+'%</strong></div>';
+const ringVisits=new Map();
+function progressRing(module,done,total){
+ const value=progressPercent(done,total);
+ let visit=ringVisits.get(module);
+ if(page==='Lecture roadmap'&&value>0&&!visit){
+  visit={started:performance.now(),value};
+  ringVisits.set(module,visit);
+ }
+ const visual=!prefersReducedMotion.matches&&visit?.value===value
+  ?progressFrame(value,performance.now()-visit.started):value;
+ return '<div class="progressRing" data-ring-module="'+module+'" role="progressbar" aria-label="Overall progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+value+'" style="--percent:'+visual+'%"><strong aria-hidden="true">'+visual+'%</strong></div>';
+}
+function animateProgressRing(){
+ const ring=$('stats').querySelector('.progressRing');
+ if(!ring||page!=='Lecture roadmap'||prefersReducedMotion.matches)return;
+ const value=Number(ring.getAttribute('aria-valuenow')), visit=ringVisits.get(ring.dataset.ringModule);
+ if(!visit||visit.value!==value)return;
+ function paint(now){
+  if(!ring.isConnected)return;
+  const elapsed=now-visit.started, visual=prefersReducedMotion.matches?value:progressFrame(value,elapsed);
+  ring.style.setProperty('--percent',visual+'%');ring.querySelector('strong').textContent=visual+'%';
+  if(visual<value)requestAnimationFrame(paint);
+ }
+ requestAnimationFrame(paint);
 }
 
 function renderPreparationOrder(subject){
  const order=subject?.preparationOrder??[];
- $('prepOrder').hidden=!order.length;
+ const block=$('prepOrder');if(!block)return;
+ block.hidden=!order.length;
  $('modules').innerHTML=order.map(([n,name])=>'<div class="module"><b>'+String(n).padStart(2,'0')+'</b>'+esc(name)+'</div>').join('');
 }
-$('nav').innerHTML=Object.keys(pages).map(p=>'<button data-page="'+p+'">'+icon(pages[p])+(p==='Lecture roadmap'?'Lectures':p)+'</button>').join('');
+$('nav').innerHTML=Object.keys(pages).map(p=>'<button data-page="'+p+'">'+icon(pages[p])+(p==='Lecture roadmap'?'Lectures':p==='Exam planner'?'Schedule':p)+'</button>').join('');
 const mobileMenu=$('pageMenu');
 function togglePageMenu(open){
  mobileMenu.setAttribute('aria-expanded',String(open));
@@ -73,8 +95,8 @@ function timerMorphOrigin(nextPage){
  if(timerGhost){timerGhost.remove();timerGhost=null}
  if(timerReveal){timerReveal.cancel();timerReveal=null}
  if(prefersReducedMotion.matches)return null;
- const from=page==='Exam planner'&&nextPage==='Lecture roadmap'?$('examSpotlight'):
-  page==='Lecture roadmap'&&nextPage==='Exam planner'?$('studyTimer'):null;
+ const from=page==='Exam planner'&&nextPage!=='Exam planner'?$('examSpotlight'):
+  page!=='Exam planner'&&nextPage==='Exam planner'?$('studyTimer'):null;
  if(!from||from.hidden||!from.getClientRects().length)return null;
  const box=from.getBoundingClientRect();
  if(box.top>=innerHeight||box.bottom<=0)return null;
@@ -121,9 +143,19 @@ $('moduleSwitch').onclick=e=>{
  activeSubject='cn';activeModule=button.dataset.module;resetRoadmap();
  openPage(page);button.focus({preventScroll:true});
 };
-document.querySelector('[data-open-study]').onclick=()=>{activeSubject='cn';openPage('Lecture roadmap');const heading=$('moduleTitle');heading.tabIndex=-1;heading.focus({preventScroll:true})};
-const examPlannerView=mountExamPlanner($('examPlanner'));
-const studyTimer=mountStudyTimer($('studyTimer'));
+const studyButton=document.querySelector('[data-open-study]');
+studyButton.onclick=(()=>{
+ const subject=studySubjects.find(s=>s.key===studyButton.dataset.subject);
+ if(!subject)return;
+ activeSubject=subject.key;openPage('Lecture roadmap');
+ const heading=subject.modules.length?$('moduleTitle'):$('panel').querySelector('h2');
+ if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true})}
+});
+let selectedDeadline='';
+const examPlannerView=mountExamPlanner($('examPlanner'),()=>selectedDeadline,code=>{
+ selectedDeadline=code;examPlannerView.update();studyTimer.update();
+});
+const studyTimer=mountStudyTimer($('studyTimer'),()=>selectedDeadline);
 $('studyTimerExam').onclick=()=>{openPage('Exam planner');const heading=$('examHeading');heading.tabIndex=-1;heading.focus({preventScroll:true})};
 function syncStudyTimer(){
  const round=state[roundKey(quizModule)];
@@ -131,7 +163,7 @@ function syncStudyTimer(){
  $('studyTimer').hidden=page==='Exam planner'||!!activeTest;
  studyTimer.update();
 }
-function render(){$('currentPage').textContent=page;document.documentElement.classList.toggle('dark',state.theme==='dark');$('theme').innerHTML=icon('moon')+(state.theme==='light'?'Dark mode':'Light mode');document.querySelectorAll('[data-page]').forEach(b=>{b.classList.toggle('active',b.dataset.page===page);b.setAttribute('aria-current',b.dataset.page===page?'page':'false')});
+function render(){$('currentPage').textContent=page==='Exam planner'?'Schedule':page;document.documentElement.classList.toggle('dark',state.theme==='dark');const themeLabel=state.theme==='light'?'Switch to dark mode':'Switch to light mode';$('theme').setAttribute('aria-label',themeLabel);$('theme').title=themeLabel;document.querySelectorAll('[data-page]').forEach(b=>{b.classList.toggle('active',b.dataset.page===page);b.setAttribute('aria-current',b.dataset.page===page?'page':'false')});
  const planner=page==='Exam planner';
  renderPreparationOrder(studySubjects.find(s=>s.key===activeSubject));
  $('examPlanner').hidden=!planner;$('studyWorkspace').hidden=planner;
@@ -169,7 +201,8 @@ function render(){$('currentPage').textContent=page;document.documentElement.cla
  updateThumbnail(next);
  $('resume').dataset.watch=$('previewLink').dataset.watch=next?.uid||'';
  $('overviewSummary').textContent=covered+' / '+study.topics.length+' syllabus topics complete · '+study.practice.filter(p=>state[pk(p,study.id)]==='Mastered').length+' / '+study.practice.length+' '+study.masteryLabel+' mastered';
- $('stats').innerHTML='<div class="stat progressStat"><div class="statHead">'+icon('chart')+'Overall progress</div>'+progressRing(done,lectures.length)+'</div><div class="stat"><div class="statHead">'+icon('check')+'Lectures completed</div><strong>'+done+' <span class="count">/ '+lectures.length+'</span></strong><small>'+remaining.length+' remaining</small></div><div class="stat"><div class="statHead">'+icon('clock')+'Viewing time <select aria-label="Playback speed" id="speed">'+options(speeds,state[moduleSpeed],'×')+'</select></div><strong>'+Math.floor(minutes/60)+'h '+minutes%60+'m</strong><small>'+(unknown?unknown+' unknown durations excluded':'Remaining at selected speed')+'</small></div>';
+ $('stats').innerHTML='<div class="stat progressStat"><div class="statHead">'+icon('chart')+'Overall progress</div>'+progressRing(study.id,done,lectures.length)+'</div><div class="stat"><div class="statHead">'+icon('check')+'Lectures completed</div><strong>'+done+' <span class="count">/ '+lectures.length+'</span></strong><small>'+remaining.length+' remaining</small></div><div class="stat"><div class="statHead">'+icon('clock')+'Viewing time <select aria-label="Playback speed" id="speed">'+options(speeds,state[moduleSpeed],'×')+'</select></div><strong>'+Math.floor(minutes/60)+'h '+minutes%60+'m</strong><small>'+(unknown?unknown+' unknown durations excluded':'Remaining at selected speed')+'</small></div>';
+ animateProgressRing();
  $('speed').onchange=e=>{changed({[moduleSpeed]:Number(e.target.value)});render()};renderPanel()}
 function updateThumbnail(lecture) {
  const frame=$('previewLink'),image=$('previewImage'),fallback=frame.querySelector('.previewFallback');
@@ -214,7 +247,7 @@ function modal(html){$('dialogBody').innerHTML=html;$('dialog').showModal()}
 function note(l){modal('<h2>Lecture notes</h2><label>'+esc(l.title)+'<textarea id="memo" maxlength="8000" placeholder="Write your notes…"></textarea></label><small>Changes save as you type.</small>');$('memo').value=get(l,'note');$('memo').oninput=e=>changed({[key(l,'note')]:e.target.value})}
 $('close').onclick=()=>$('dialog').close();$('dialog').onclose=render;
 $('theme').onclick=()=>{changed({theme:state.theme==='light'?'dark':'light'});render()};
-$('settings').onclick=()=>{modal('<h2>Backup &amp; settings</h2><p id="sync" role="status"></p><p>Export a JSON copy of your lectures, notes, practice and preferences.</p><button id="export">Export backup</button><button id="import">Import backup</button><input id="backup" type="file" accept=".json,application/json" hidden><p id="notice" role="status"></p><button id="reset">Reset Module 3 progress</button>');$('sync').textContent=sync;
+function openBackupSettings(){modal('<h2>Backup &amp; settings</h2><p id="sync" role="status"></p><p>Export a JSON copy of your lectures, notes, practice and preferences.</p><button id="export">Export backup</button><button id="import">Import backup</button><input id="backup" type="file" accept=".json,application/json" hidden><p id="notice" role="status"></p><button id="reset">Reset Module 3 progress</button>');$('sync').textContent=sync;
  $('export').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({version:1,data:state},null,2)],{type:'application/json'}));a.download='network-notebook-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};
  $('import').onclick=()=>$('backup').click();$('backup').onchange=async e=>{try{const f=e.target.files[0];if(!f)return;if(f.size>1500000)throw Error();const b=JSON.parse(await f.text());b.data=migrate(b.data);if(b.version!==1||!valid(b.data)||!Object.keys(b.data).length)throw Error();if(confirm('Restore the saved fields from this backup?')){changed(b.data);$('notice').textContent='Backup restored.'}}catch{$('notice').textContent='Invalid backup. Your progress is unchanged.'}e.target.value=''};
  $('reset').onclick=()=>{if(confirm('Clear all Module 3 completion, revision marks, notes and numerical practice?')){changed(Object.fromEntries(Object.entries(defaults).filter(([k])=>k.startsWith('m3/'))));$('notice').textContent='Module 3 progress cleared.'}}};

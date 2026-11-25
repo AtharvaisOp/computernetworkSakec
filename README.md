@@ -54,3 +54,5 @@ Module data lives in `src/data.js` (Module 3) and `src/m4-data.js` (Module 4), w
 The compact exam clock uses the shared IST timetable on study tabs and is hidden during active flashcard rounds. Tab transitions honor reduced-motion preferences.
 
 Overall progress uses a single accessible ring. Preparation order is configured per subject. The next-exam clock moves between the planner and Lectures with a short reduced-motion-aware transition.
+
+Schedule opens on the next exam. Choose another subject to see its exact IST deadline and study page, or return to Next exam. The progress ring animates to saved progress, and the shared timer and theme controls honor reduced motion.
