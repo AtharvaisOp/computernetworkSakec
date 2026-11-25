@@ -146,3 +146,25 @@ footer .accountLink{display:block;text-align:center;margin:0 0 8px}
 .subjectChooser select{min-height:42px;max-width:calc(100% - 65px)}
 .subjectChooser[hidden],.moduleSwitch[hidden],.quizzing .subjectChooser,
 .emptySubject>:is(#moduleEyebrow,#moduleTitle,#moduleDescription,.hero,.stats,.overviewSummary){display:none}
+
+/* Quiet shared study chrome; the live figures carry the visual emphasis. */
+.studyTimer{display:flex;align-items:center;justify-content:space-between;gap:10px;margin:0 0 24px;padding:8px 12px 8px 8px;background:var(--surface);border:1px solid var(--line);border-radius:12px}
+.studyTimer[hidden],.studyTimerClock[hidden]{display:none}
+.studyTimerExam{display:flex;align-items:center;gap:9px;text-align:left;min-width:0;min-height:44px;padding:3px 7px;border:0;background:none}
+.studyTimerExam>span:last-child{min-width:0}
+.studyTimerIcon{width:33px;height:33px;display:grid;place-items:center;flex:none;background:var(--active);color:var(--green);border-radius:8px}
+.studyTimerLabel{display:block;font-size:.875rem;color:var(--muted);line-height:1.2}
+.studyTimerExam strong{display:block;font-size:1rem;line-height:1.3;overflow-wrap:anywhere}
+.studyTimerClock{display:flex;align-items:center;flex:none;gap:0;font-variant-numeric:tabular-nums;white-space:nowrap}
+.studyTimerClock>span{padding:0 clamp(4px,1.5vw,12px);line-height:1.1}
+.studyTimerClock>span+span{border-left:1px solid var(--line)}
+.studyTimerClock b{font-size:clamp(.96rem,2.2vw,1.2rem);font-weight:720;letter-spacing:-.025em}
+.studyTimerClock small{color:var(--muted);font-size:.875rem;margin-left:2px}
+.studyTimerExam:focus-visible,.groupHead:focus-visible,.moduleSwitch button:focus-visible{outline:2px solid var(--green)}
+@media(max-width:520px){
+ .studyTimer{padding:5px 4px;gap:2px;margin:0 0 18px}
+ .studyTimerExam{gap:6px;padding-inline:4px}
+ .studyTimerIcon{width:28px;height:28px}
+ .studyTimerClock>span{padding-inline:4px}
+}
+@media(max-width:350px){.studyTimerIcon{display:none}}

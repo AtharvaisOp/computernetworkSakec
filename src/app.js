@@ -27,11 +27,21 @@ async function flush(){
 window.addEventListener('online',flush);window.addEventListener('focus',()=>{if(!$('dialog').open)flush()});
 const roadmapHash=()=>location.hash.startsWith('#computer-networks')||location.hash.startsWith('#lectures/');
 let page=location.hash.startsWith('#flashcards')?'Flashcards':roadmapHash()?'Lecture roadmap':'Exam planner';
-const studySubjects=[{key:'cn',label:'Computer Networks',modules:['m3','m4']},...examSchedule.filter(e=>e.code!=='C.N.').map(e=>({key:e.code.toLowerCase().replace(/[^a-z]/g,''),label:e.label,modules:[]}))];
+const studySubjects=[{key:'cn',label:'CN',modules:['m3','m4']},...examSchedule.filter(e=>e.code!=='C.N.').map(e=>({key:e.code.toLowerCase().replace(/[^a-z]/g,''),label:e.label,modules:[]}))];
 let activeModule=location.hash.endsWith('/m4')?'m4':'m3';
 let activeSubject=studySubjects.find(s=>s.key===location.hash.split('/')[1])?.key||'cn';
-let filter='All',query='',collapsed=new Set(studyModules[activeModule].sections.slice(1).map(s=>s.name));
+let filter='All',query='',collapsed=new Set(),roadmapManuallyChanged=false;
 const currentStudy=()=>studyModules[activeModule];
+const prefersReducedMotion=matchMedia('(prefers-reduced-motion: reduce)');
+function resetRoadmap(){
+ roadmapManuallyChanged=false;filter='All';query='';
+}
+function animateStudyView(){
+ if(prefersReducedMotion.matches)return;
+ const target=page==='Exam planner'?$('examPlanner'):$('studyWorkspace');
+ target.getAnimations().forEach(animation=>animation.cancel());
+ target.animate([{opacity:.68,transform:'translateY(5px)'},{opacity:1,transform:'none'}],{duration:185,easing:'cubic-bezier(.2,.7,.2,1)'});
+}
 const pages={'Exam planner':'clock','Lecture roadmap':'road','Flashcards':'book','Syllabus coverage':'list','Numerical practice':'practice','Study priorities':'flag'};
 const get=(l,k)=>state[key(l,k)];
 const link=l=>youtubeWatch(l);
@@ -50,14 +60,15 @@ document.addEventListener('keydown',event=>{
  if(event.key==='Escape'&&mobileMenu.getAttribute('aria-expanded')==='true'){togglePageMenu(false);mobileMenu.focus()}
 });
 function openPage(nextPage,moveFocus=false){
+ if(nextPage==='Lecture roadmap')resetRoadmap();
  page=nextPage;togglePageMenu(false);
- const hash=page==='Flashcards'?'#flashcards'+(quizModule==='m4'?'/m4':''):page==='Exam planner'?'':page==='Lecture roadmap'&&activeSubject!=='cn'?'#lectures/'+activeSubject:'#computer-networks'+(activeModule==='m4'?'/m4':'');
+ const hash=page==='Flashcards'?'#flashcards'+(playingQuiz?'/'+quizModule:''):page==='Exam planner'?'':page==='Lecture roadmap'&&activeSubject!=='cn'?'#lectures/'+activeSubject:'#computer-networks'+(activeModule==='m4'?'/m4':'');
  history.replaceState(null,'',location.pathname+location.search+hash);
- render();window.scrollTo(0,0);
+ render();animateStudyView();window.scrollTo(0,0);
  if(moveFocus&&mobileMenu.offsetWidth)mobileMenu.focus({preventScroll:true});
 }
 $('nav').onclick=e=>{const b=e.target.closest('button');if(b){
- if(b.dataset.page==='Flashcards')quizModule=activeModule;
+ if(b.dataset.page==='Flashcards'){quizModule=activeModule;playingQuiz=false;}
  if(b.dataset.page==='Numerical practice')activeSubject='cn';
  openPage(b.dataset.page,true);
 }};
@@ -66,15 +77,23 @@ subjectSelect.innerHTML=studySubjects.map(s=>'<option value="'+s.key+'">'+esc(s.
 subjectSelect.onchange=()=>{activeSubject=subjectSelect.value;openPage('Lecture roadmap');subjectSelect.focus({preventScroll:true})};
 $('moduleSwitch').onclick=e=>{
  const button=e.target.closest('button[data-module]');if(!button||button.dataset.module===activeModule)return;
- activeSubject='cn';activeModule=button.dataset.module;filter='All';query='';
- collapsed=new Set(currentStudy().sections.slice(1).map(s=>s.name));
+ activeSubject='cn';activeModule=button.dataset.module;resetRoadmap();
  openPage(page);button.focus({preventScroll:true});
 };
 document.querySelector('[data-open-study]').onclick=()=>{activeSubject='cn';openPage('Lecture roadmap');const heading=$('moduleTitle');heading.tabIndex=-1;heading.focus({preventScroll:true})};
 const examPlannerView=mountExamPlanner($('examPlanner'));
+const studyTimer=mountStudyTimer($('studyTimer'));
+$('studyTimerExam').onclick=()=>{openPage('Exam planner');const heading=$('examHeading');heading.tabIndex=-1;heading.focus({preventScroll:true})};
+function syncStudyTimer(){
+ const round=state[roundKey(quizModule)];
+ const activeTest=page==='Flashcards'&&playingQuiz&&round&&round.index<round.cards.length;
+ $('studyTimer').hidden=page==='Exam planner'||!!activeTest;
+ studyTimer.update();
+}
 function render(){$('currentPage').textContent=page;document.documentElement.classList.toggle('dark',state.theme==='dark');$('theme').innerHTML=icon('moon')+(state.theme==='light'?'Dark mode':'Light mode');document.querySelectorAll('[data-page]').forEach(b=>{b.classList.toggle('active',b.dataset.page===page);b.setAttribute('aria-current',b.dataset.page===page?'page':'false')});
  const planner=page==='Exam planner';
  $('examPlanner').hidden=!planner;$('studyWorkspace').hidden=planner;
+ syncStudyTimer();
  document.body.classList.toggle('quizzing', page==='Flashcards');
  document.body.classList.toggle('sectionView',!planner&&page!=='Lecture roadmap'&&page!=='Flashcards');
  if(planner){examPlannerView.update();return}
@@ -96,6 +115,10 @@ function render(){$('currentPage').textContent=page;document.documentElement.cla
  $('moduleDescription').textContent=lectures.length+' lectures · '+study.sections.length+' sections · '+study.marks+' of 60 marks (estimated)';
  const masteryButton=$('nav').querySelector('[data-page="Numerical practice"]');
  masteryButton.innerHTML=icon('practice')+study.practiceLabel;
+ if(page==='Lecture roadmap'&&!roadmapManuallyChanged){
+  const initial=initialLectureSection(study,state);
+  collapsed=new Set(study.sections.filter(s=>s.name!==initial).map(s=>s.name));
+ }
  const {remaining,done,unknown,covered,minutes}=viewingSummary(study,state);
  const next=nextLecture(lectures,state,state[study.id+'/lastActive']);
  $('nextTitle').textContent=next?next.title:'Roadmap completed';
@@ -137,13 +160,13 @@ function topicDetail(id,matched){
  const personal=matched.filter(l=>get(l,'note')).map(l=>'<p><b>'+esc(l.title)+'</b><br>'+esc(get(l,'note'))+'</p>').join('');
  return '<details class="quizReview"><summary>Revision notes · '+id+'</summary><p>'+esc(n.summary)+'</p><p>'+esc(n.formula)+'</p><p>'+esc(n.diagram)+'</p><p><b>'+esc(n.question)+'</b><br>'+esc(n.answer)+'</p>'+personal+'</details>';
 }
-function renderPanel(){const study=currentStudy(),{topics,practice,stages,lectures}=study;let html='<div class="panelHead"><h2>'+(page==='Numerical practice'?study.practiceLabel:page)+'</h2>'+(page==='Lecture roadmap'?'<button class="quiet" id="expand">'+(collapsed.size?'Expand all':'Collapse all')+'</button>':'')+'</div>';
+function renderPanel(){const study=currentStudy(),{topics,practice,stages,lectures}=study;let html='<div class="panelHead"><h2>'+(page==='Numerical practice'?study.practiceLabel:page)+'</h2></div>';
  if(page==='Lecture roadmap'){html+='<div class="tools"><div class="chips">'+['All','Incomplete','Completed','Revision'].map(f=>'<button data-filter="'+f+'" aria-pressed="'+(f===filter)+'" class="'+(f===filter?'active':'')+'">'+f+'</button>').join('')+'</div><label class="search">'+icon('find')+'<input aria-label="Search lectures" id="search" placeholder="Search lectures…" value="'+esc(query)+'"></label></div><div id="groups">'+groups()+'</div>'}
  if(page==='Syllabus coverage')html+='<p class="info">Coverage follows lectures marked complete. Track mastery independently in '+study.practiceLabel+'.</p><div class="block">'+topics.map((t,i)=>{let sy=study.id[1]+'.'+(i+1),ls=lectures.filter(l=>topicMatch(l,sy)),n=ls.filter(l=>get(l,'done')).length;return '<div class="setting"><span><b>'+sy+'</b> '+esc(t)+'</span><small>'+n+'/'+ls.length+' · '+(n===0?'Not started':n===ls.length?'Completed':'In progress')+'</small></div>'+topicDetail(sy,ls)}).join('')+'</div>';
  if(page==='Numerical practice')html+='<p class="info">'+(study.id==='m4'?'Track what you can explain or apply without your notes.':'Update each skill after solving problems independently.')+'</p><div class="block">'+practice.map(p=>'<label class="setting">'+esc(p)+'<select data-practice="'+pk(p,study.id)+'">'+options(stages,state[pk(p,study.id)])+'</select></label>').join('')+'</div>';
  if(page==='Study priorities')html+=(study.id==='m3'?'<div class="block"><h3>Recommended study effort</h3>'+['IPv4, CIDR, subnetting and supernetting','Routing algorithms','NAT, IPv6 and network protocols','Fundamentals and congestion control'].map((t,i)=>'<div class="setting">'+t+'<b>'+[40,30,20,10][i]+'%</b></div>').join('')+'</div>':'')+'<div class="block"><h3>Estimated exam weight · 60 marks</h3>'+['03 · Network Layer','04 · Transport Layer','02 · Data Link Layer','01 · Introduction to Networking'].map((t,i)=>'<div class="setting">'+t+'<span>'+['22.4 marks · 37.33%','19.6 marks · 32.67%','9.6 marks · 16%','8.4 marks · 14%'][i]+'</span></div>').join('')+'</div>';
- $('panel').innerHTML=html;if($('search'))$('search').oninput=e=>{query=e.target.value;collapsed.clear();$('groups').innerHTML=groups();$('expand').textContent='Collapse all'} }
-$('panel').onclick=e=>{const b=e.target.closest('button,input');if(!b)return;const d=b.dataset,{sections,lectures}=currentStudy();if(d.filter){filter=d.filter;collapsed.clear()}else if(b.id==='expand'){collapsed=collapsed.size?new Set():new Set(sections.map(s=>s.name))}else if(d.section!==undefined){const name=sections[+d.section].name;collapsed.has(name)?collapsed.delete(name):collapsed.add(name)}else if(d.done||d.revision){const l=lectures.find(l=>l.uid===(d.done||d.revision)),k=key(l,d.done?'done':'revision');changed({[k]:!state[k]})}else if(d.note){note(lectures.find(l=>l.uid===d.note));return}else return;render();if(d.done)document.querySelector('[data-done="'+d.done+'"]')?.closest('.row')?.classList.add('toggled');if(b.dataset.done||b.dataset.revision||b.dataset.section!==undefined||d.filter||b.id==='expand'){const attr=Object.keys(d)[0];(attr?document.querySelector('[data-'+attr+'="'+d[attr]+'"]'):$('expand'))?.focus({preventScroll:true})}};
+ $('panel').innerHTML=html;if($('search'))$('search').oninput=e=>{query=e.target.value;roadmapManuallyChanged=true;collapsed.clear();$('groups').innerHTML=groups()} }
+$('panel').onclick=e=>{const b=e.target.closest('button,input');if(!b)return;const d=b.dataset,{sections,lectures}=currentStudy();if(page==='Lecture roadmap')roadmapManuallyChanged=true;if(d.filter){filter=d.filter;collapsed.clear()}else if(d.section!==undefined){const name=sections[+d.section].name;collapsed.has(name)?collapsed.delete(name):collapsed.add(name)}else if(d.done||d.revision){const l=lectures.find(l=>l.uid===(d.done||d.revision)),k=key(l,d.done?'done':'revision');changed({[k]:!state[k]})}else if(d.note){note(lectures.find(l=>l.uid===d.note));return}else return;render();if(d.done)document.querySelector('[data-done="'+d.done+'"]')?.closest('.row')?.classList.add('toggled');if(b.dataset.done||b.dataset.revision||b.dataset.section!==undefined||d.filter){const attr=Object.keys(d)[0];(attr?document.querySelector('[data-'+attr+'="'+d[attr]+'"]'):null)?.focus({preventScroll:true})}};
 $('panel').onchange=e=>{if(e.target.dataset.practice)changed({[e.target.dataset.practice]:e.target.value})};
 function modal(html){$('dialogBody').innerHTML=html;$('dialog').showModal()}
 function note(l){modal('<h2>Lecture notes</h2><label>'+esc(l.title)+'<textarea id="memo" maxlength="8000" placeholder="Write your notes…"></textarea></label><small>Changes save as you type.</small>');$('memo').value=get(l,'note');$('memo').oninput=e=>changed({[key(l,'note')]:e.target.value})}
@@ -154,7 +177,6 @@ $('settings').onclick=()=>{modal('<h2>Backup &amp; settings</h2><p id="sync" rol
  $('import').onclick=()=>$('backup').click();$('backup').onchange=async e=>{try{const f=e.target.files[0];if(!f)return;if(f.size>1500000)throw Error();const b=JSON.parse(await f.text());b.data=migrate(b.data);if(b.version!==1||!valid(b.data)||!Object.keys(b.data).length)throw Error();if(confirm('Restore the saved fields from this backup?')){changed(b.data);$('notice').textContent='Backup restored.'}}catch{$('notice').textContent='Invalid backup. Your progress is unchanged.'}e.target.value=''};
  $('reset').onclick=()=>{if(confirm('Clear all Module 3 completion, revision marks, notes and numerical practice?')){changed(Object.fromEntries(Object.entries(defaults).filter(([k])=>k.startsWith('m3/'))));$('notice').textContent='Module 3 progress cleared.'}}};
 
-const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 let feedbackTimer;
 function feedback(message) {
  const toast = $('feedback');
@@ -170,9 +192,6 @@ document.addEventListener('click', event => {
  if (id) {
   const marked = button.dataset.done ? button.checked : button.getAttribute('aria-pressed') !== 'true';
   feedback(button.dataset.done ? (marked ? 'Lecture completed' : 'Marked incomplete') : (marked ? 'Added to revision' : 'Removed from revision'));
- }
- if (!reducedMotion.matches && button.dataset.page) {
-  $('panel').animate([{opacity:.35, transform:'translateY(7px)'},{opacity:1, transform:'translateY(0)'}],{duration:200});
  }
 }, true);
 render();persist();flush();

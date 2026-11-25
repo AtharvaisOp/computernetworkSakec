@@ -76,3 +76,28 @@ function mountExamPlanner(root) {
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)update()});
   return {update};
 }
+
+// A separate presentation of the same timetable logic; no independent exam state.
+function mountStudyTimer(root) {
+  const label=root.querySelector('#studyTimerLabel'),title=root.querySelector('#studyTimerTitle');
+  const clock=root.querySelector('#studyTimerClock'), digits=Array.from(clock.querySelectorAll('b'));
+  let snapshot='';
+  function update(){
+    if(root.hidden)return;
+    const plan=getExamPlan(Date.now()), exam=plan.today[0]??plan.next;
+    const text=plan.today.length?(exam.startTime?'Exam underway':'Exam today'):exam?'Next exam':'Timetable complete';
+    const name=exam?.label??'No upcoming exams';
+    const state=text+'|'+name;
+    if(snapshot!==state){
+      snapshot=state;label.textContent=text;title.textContent=name;
+      clock.hidden=!exam||!!plan.today.length;
+    }
+    if(!clock.hidden)examClockValues(plan.seconds).forEach((v,i)=>{
+      const value=String(v).padStart(2,'0');
+      if(digits[i].textContent!==value)digits[i].textContent=value;
+    });
+  }
+  window.setInterval(update,1000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)update()});
+  return {update};
+}

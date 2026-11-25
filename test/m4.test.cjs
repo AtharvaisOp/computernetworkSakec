@@ -63,3 +63,9 @@ test('authenticated progress API merges Module 4 changes without overwriting Mod
  assert.deepEqual(await get.json(),{'m3/m3-l01/done':true,speed:1.25,'m4/m4-l11/done':true,'m4/practice/tcp-timers':'Mastered','m4/speed':2});
  assert.deepEqual(rows.get('progress/v1/bob'),{'m4/m4-l02/done':true});
 });
+test('roadmap opens only the section that holds the resume lecture',()=>{
+ assert.equal(read("initialLectureSection(studyModules.m3,{'m3/lastActive':'m3-l14'})"),'Classless Addressing, Subnetting and Supernetting');
+ assert.equal(read("initialLectureSection(studyModules.m4,{'m4/lastActive':'m4-l11'})"),'Domain Name System');
+ assert.equal(read("initialLectureSection(studyModules.m4,{'m4/lastActive':'m4-l11','m4/m4-l11/done':true})"),'Transport Layer Fundamentals');
+ assert.equal(read("initialLectureSection(studyModules.m3,Object.fromEntries(studyModules.m3.lectures.map(l=>[key(l,'done'),true])))"),null);
+});

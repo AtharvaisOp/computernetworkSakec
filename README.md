@@ -26,7 +26,7 @@ GitHub Actions builds and tests pushes and pull requests on Ubuntu with Node 22.
 Exam dates and exam windows are in `src/exams.js`. Set `startTime` and `endTime` in 24-hour `HH:MM` IST. The countdown updates every second and targets the scheduled start, shows the exam as underway until the scheduled end, and then highlights the next exam. If an entry has only a date, the planner counts down to the start of that day and marks it “Today” until midnight IST.
 
 ## Module 4: Transport Layer
-Open **Lectures → Computer Networks → 04 · Transport Layer**. The other exam subjects are listed in the subject picker and show an empty state until learning resources are added. The roadmap has 16 lectures, six sections, and seven syllabus topics, plus 15 mastery items, a note for each topic, and the existing 50 flashcards.
+Open **Lectures → Computer Networks → 04 · Transport Layer**. The subject picker abbreviates Computer Networks to **CN**. On opening a roadmap, only the section with the unfinished resume lecture is expanded; all completed roadmaps start collapsed. The other exam subjects are listed in the subject picker and show an empty state until learning resources are added. The roadmap has 16 lectures, six sections, and seven syllabus topics, plus 15 mastery items, a note for each topic, and the existing 50 flashcards.
 
 | ID | Syllabus | Lecture | YouTube ID | Duration or window |
 | --- | --- | --- | --- | --- |
@@ -50,3 +50,5 @@ Open **Lectures → Computer Networks → 04 · Transport Layer**. The other exa
 The two chapters of Sundeep Saradhi Kanthety's full course use the same video ID but separate progress keys. The embedded player uses start/end parameters and valid saved positions. External YouTube URLs include the start or resume timestamp but cannot enforce the end. Opening a video never marks it complete. The embedded player restores position and selects the preferred speed only when YouTube supports those controls.
 
 Module data lives in `src/data.js` (Module 3) and `src/m4-data.js` (Module 4), with reusable rendering and progress logic. `src/m4-notes.js` is the integration point for revised short notes. Existing Module 3 keys, quiz IDs, sign-in and the hosted storage binding are unchanged.
+
+The compact exam clock uses the shared IST timetable on study tabs and is hidden during active flashcard rounds. Tab transitions honor reduced-motion preferences.

@@ -79,6 +79,7 @@ function roundQuiz(r){
  (graded?'<section class="quizExplanation" tabindex="-1"><b>'+(picked===0?'Correct':'Review the reasoning')+'</b><p>'+esc(card.explanation)+'</p><small>Module '+quizModule[1]+' notes · '+esc(card.ref)+'</small></section><div class="quizActions">'+quizButton('next',r.index===r.cards.length-1?'See results':'Next card','quizPrimary')+'</div>':'')+'</article>';
 }
 function renderQuiz(){
+ syncStudyTimer();
  const panel=$('panel'),round=state[roundKey(quizModule)];
  const html=playingQuiz&&round?roundQuiz(round):homeQuiz();
  if(panel.dataset.quizView===html && panel.querySelector('[data-quiz]'))return;

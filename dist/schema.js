@@ -45,6 +45,10 @@ function migrate(data){
 function nextLecture(items,record,last){
  return items.find(l=>l.uid===last&&!record[key(l,'done')])||items.find(l=>!record[key(l,'done')]);
 }
+function initialLectureSection(mod,record){
+ const next=nextLecture(mod.lectures,record,record[mod.id+'/lastActive']);
+ return next?mod.sections.find(section=>section.rows.some(lecture=>lecture.uid===next.uid))?.name??null:null;
+}
 function viewingSummary(mod,record) {
  const remaining=mod.lectures.filter(l=>!record[key(l,'done')]);
  const unknown=remaining.filter(l=>!l.time).length;
