@@ -70,7 +70,6 @@ const lecturePlayer = (() => {
     $('playerMeta').textContent = 'Lecture ' + (index + 1) + ' of ' + lectures.length + ' · ' + lecture.educator;
     $('playerTitle').textContent = lecture.title;
     const frame = $('lectureFrame');
-    frame.style.cssText = 'display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:10px;background:#111';
     frame.title = lecture.title + ' · YouTube video player';
     frame.src=youtubeEmbed(lecture,location.origin,saved);
     $('youtubeFallback').href=youtubeWatch(lecture,saved);
@@ -83,8 +82,6 @@ const lecturePlayer = (() => {
     next.disabled = index === lectures.length - 1;
     previous.onclick = () => open(lectures[index - 1]);
     next.onclick = () => open(lectures[index + 1]);
-    dialog.style.width = 'min(760px, calc(100vw - 24px))';
-    dialog.style.maxWidth = 'calc(100vw - 24px)';
     dialog.classList.add('playerDialog');
     dialog.setAttribute('aria-labelledby', 'playerTitle');
     if (!dialog.open) dialog.showModal();
@@ -133,8 +130,6 @@ const lecturePlayer = (() => {
   document.getElementById('dialog').addEventListener('close', () => {
     if (!active) return;
     stop();
-    $('dialog').style.removeProperty('width');
-    $('dialog').style.removeProperty('max-width');
     $('dialog').classList.remove('playerDialog');
     $('dialog').removeAttribute('aria-labelledby');
     const target = returnLink?.isConnected ? returnLink :

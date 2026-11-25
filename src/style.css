@@ -57,7 +57,7 @@ dialog[open]{box-shadow:0 20px 90px #10173350;animation:dialog-in .18s ease-out}
 @media(max-width:600px){.hero{flex-direction:column;align-items:stretch;padding:17px;gap:15px}.hero .videoWindow{width:min(100%,320px);align-self:center}.accountTools .paper{display:none}.accountLink{font-size:13px}.hero .heroText{max-width:none}}
 
 #pageMenu{display:none}
-@media(max-width:900px){
+@media(max-width:1100px){
  aside{position:static;inset:auto;width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:10px max(16px,env(safe-area-inset-right)) 12px max(16px,env(safe-area-inset-left));border:0;border-bottom:1px solid var(--line);overflow:visible;background:var(--side)}
  aside small,#modules{display:none}.brand{min-width:0;font-size:17px}.brand b{flex-shrink:0}
  aside footer{position:static;grid-column:2;grid-row:1;margin:0;padding:0;display:flex;gap:2px}
@@ -97,7 +97,7 @@ dialog[open]{box-shadow:0 20px 90px #10173350;animation:dialog-in .18s ease-out}
  .chips{grid-template-columns:repeat(2,minmax(0,1fr))}.setting select{flex-basis:100%}
 }
 
-@media(max-width:900px){body.sectionView .wrap>:is(.eyebrow,h1,.sub,.hero,.stats){display:none}body.sectionView .panelHead:first-child{margin-top:0}}
+@media(max-width:1100px){body.sectionView .wrap>:is(.eyebrow,h1,.sub,.hero,.stats){display:none}body.sectionView .panelHead:first-child{margin-top:0}}
 .srOnly{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 footer .accountLink{display:block;text-align:center;margin:0 0 8px}
 .row input[type=checkbox]{appearance:none;display:grid;place-items:center;width:24px;height:24px;border:1.5px solid var(--muted);border-radius:8px;background:var(--surface);position:relative}
@@ -107,8 +107,9 @@ footer .accountLink{display:block;text-align:center;margin:0 0 8px}
 .row input[type=checkbox]::before{content:"";position:absolute;inset:-8px}
 .lectureThumb{float:left;width:76px;aspect-ratio:16/9;object-fit:contain;background:#14182b;border-radius:6px;margin:2px 12px 2px 0}
 .overviewSummary{margin:12px 0}.quizzing .overviewSummary,.sectionView .overviewSummary{display:none}
-.playerDialog{width:min(800px,95vw)}#lectureFrame{display:block;border:0;width:100%;aspect-ratio:16/9;background:#111}.playerTools{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:5px;margin:12px 0}.playerTools a,.details small .watchText{color:var(--green)}
-@media(max-width:900px){
+dialog.playerDialog{width:min(800px,calc(100% - 32px));max-width:none;max-height:calc(100dvh - max(32px,calc(env(safe-area-inset-top) + env(safe-area-inset-bottom))));overflow:auto;overscroll-behavior:contain;padding:clamp(12px,2.5vw,23px)}
+#lectureFrame{display:block;width:min(100%,max(320px,calc((100dvh - 150px) * 16 / 9)));aspect-ratio:16/9;margin-inline:auto;border:0;border-radius:10px;background:#111}.playerTools{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:5px;margin:12px 0}.playerTools a,.details small .watchText{color:var(--green)}
+@media(max-width:1100px){
  aside{grid-template-columns:minmax(0,1fr) 44px;gap:0;min-height:62px;padding-block:8px}
  #pageMenu{grid-column:2;grid-row:1;display:grid;place-items:center;width:44px;padding:0}
  aside footer{display:none}aside.openMenu nav{margin-top:8px}
@@ -219,7 +220,7 @@ html.dark .examSpotlight{background:var(--timer-bg);border-color:var(--timer-bor
 aside footer{display:flex;align-items:center;gap:8px}
 aside footer .accountLink{display:inline-flex;align-items:center;justify-content:center;min-height:44px;margin:0;padding:6px 9px;text-align:center;line-height:1.2}
 aside footer .accountLink.signOut{padding-inline:12px}
-@media(max-width:760px){
+@media(max-width:640px){
  aside footer{display:none}
  aside.openMenu footer{justify-content:flex-end;gap:8px}
  aside.openMenu footer .accountLink{margin:0}
@@ -235,3 +236,103 @@ aside footer .accountLink.signOut{padding-inline:12px}
 .examReminders textarea{resize:vertical;margin-bottom:8px}
 @media(max-width:460px){.reminderOptions{grid-template-columns:1fr}}
 .progressBackup{margin-inline-start:10px;margin-block-start:10px}
+
+/* A full-width study surface until there is room for both the rail and the content. */
+.stats,.deckGrid{grid-template-columns:repeat(3,minmax(0,1fr))}
+.deckGrid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.stat,.deckTile,.hero .heroText,.groupHead strong,.examChoice>span:first-child,.search,.answerOption span{min-width:0}
+.hero .heroText,.examChoice>span:first-child,.groupHead strong,.answerOption span,.setting>span,.quizReview,.block p{overflow-wrap:anywhere}
+.statHead{flex-wrap:wrap}
+.examSpotlight{grid-template-columns:minmax(0,1fr) minmax(min(100%,230px),auto)}
+.examClock>div{padding-inline:clamp(3px,1vw,11px)}
+.examChoice{min-height:52px}
+.examListHeading .quiet{min-height:44px}
+.setting select{max-width:100%}
+@media(max-width:650px){
+ .examSpotlight{grid-template-columns:minmax(0,1fr)}
+}
+@media(max-width:600px){
+ .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(641px <= width <= 1100px){
+ .wrap{
+  padding-inline:max(clamp(22px,3.2vw,34px),env(safe-area-inset-left)) max(clamp(22px,3.2vw,34px),env(safe-area-inset-right));
+  padding-top:clamp(24px,3vw,32px);
+ }
+ .examSpotlight{padding:clamp(20px,3.3vw,34px)}
+ .examClock>div{min-width:clamp(48px,7vw,76px)}
+ .hero{padding:clamp(18px,2.6vw,28px)}
+ .hero .videoWindow{width:min(42%,350px)}
+ .deckTile strong,.quizLaunch h2{font-size:clamp(1.55rem,3.25vw,2.15rem)}
+ .groupHead,.setting{gap:9px}
+ .row{gap:10px;padding:10px 12px}
+ .quizExplanation,.quizReview{overflow-wrap:anywhere}
+ .setting>span:first-child{flex:1}
+}
+@media(max-width:385px){
+ .examListHeading>span{margin-inline-start:0}
+ .examClock span{font-size:.78rem}
+}
+@media(pointer:coarse),(max-width:1100px){
+ button,select,.accountLink{touch-action:manipulation}
+ #nav button,.moduleSwitch button,.subjectChooser select,.setting select,.answerOption,.quizActions button,
+ .quizTop button,.playerTools button,.examReminders :is(summary,select,button),#progressBackup{min-height:44px}
+ .examReminders summary{padding-block:11px}
+ .row input[type=checkbox]::before{inset:-10px}
+ .row .icon{min-height:44px;min-width:44px}
+ .search input,.examReminders select,.examReminders textarea{font-size:1rem}
+}
+
+/* A narrow left rail stays available without taking tablet reading space. */
+:root{--rail:64px;--rail-left:env(safe-area-inset-left,0px)}
+aside,aside.openMenu{
+ position:fixed;inset:0 auto 0 0;width:calc(var(--rail) + var(--rail-left));z-index:8;
+ display:flex;flex-direction:column;align-items:stretch;gap:0;
+ overflow:auto;overscroll-behavior:contain;
+ padding:max(10px,env(safe-area-inset-top)) 8px max(10px,env(safe-area-inset-bottom)) calc(8px + var(--rail-left));
+ border:0;border-right:1px solid var(--line);background:var(--side);
+}
+aside.openMenu{
+ width:min(calc(100% - 32px),calc(254px + var(--rail-left)));padding-inline:calc(12px + var(--rail-left)) 12px;
+ box-shadow:14px 0 36px #10173326;
+}
+aside .brand,aside>.workspaceLabel,aside:not(.openMenu) .prepOrder,aside:not(.openMenu) .railLabel{display:none}
+aside.openMenu .brand{display:flex;min-height:44px;margin-bottom:6px;padding:0 5px}
+aside.openMenu .prepOrder:not([hidden]){display:block}
+aside.openMenu .prepOrder>small,aside.openMenu #modules{display:block}
+aside.openMenu .prepOrder>small{margin:16px 8px 5px}
+#pageMenu{
+ display:grid;place-items:center;flex:none;width:44px;height:44px;margin:0 auto 8px;
+ padding:0;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--green);
+}
+aside.openMenu #pageMenu{margin:0 auto 8px 0}
+#nav,#nav.menuOpen{display:flex;flex-direction:column;gap:3px;overflow:visible;margin:0}
+#nav button{display:flex;justify-content:center;flex:none;gap:0;min-height:44px;width:100%;padding:6px;margin:0}
+#nav button svg,aside footer .accountLink svg{display:block;flex:none;width:20px;height:20px}
+aside.openMenu #nav button{justify-content:flex-start;gap:12px;padding-inline:10px}
+#nav button.active{box-shadow:inset 2px 0 var(--green)}
+aside footer,aside:not(.openMenu) footer,aside.openMenu footer{
+ position:static;display:flex;justify-content:center;align-items:center;gap:7px;
+ margin: auto 0 0;padding:12px 0 0;border:0;
+}
+aside:not(.openMenu) footer{flex-direction:column}
+aside footer .accountLink,aside.openMenu footer .accountLink{
+ flex:none;min-width:44px;min-height:44px;margin:0;padding:0;gap:7px;
+}
+aside.openMenu footer .accountLink{padding-inline:10px}
+aside footer .themeToggle{margin:0}
+#sidebarBackdrop{position:fixed;inset:0;width:100%;height:100%;z-index:7;border:0;border-radius:0;background:#121a324d}
+#sidebarBackdrop[hidden]{display:none}
+main{margin:0 0 0 calc(var(--rail) + var(--rail-left));min-width:0}
+@media(max-width:640px){
+ :root{--rail:54px}
+ aside,aside.openMenu{padding-inline:calc(5px + var(--rail-left)) 4px}
+ aside.openMenu{padding-inline:calc(12px + var(--rail-left)) 12px}
+ aside footer .themeToggle{min-width:44px;width:44px;height:44px}
+ .wrap{padding-inline:12px}
+ .studyTimer{flex-wrap:wrap}
+ .studyTimerClock{margin-inline-start:auto}
+ .examListHeading{column-gap:7px}
+ .examListHeading h2{font-size:clamp(1.3rem,6vw,1.8rem)}
+ .examListHeading>span{margin-inline-start:0}
+}

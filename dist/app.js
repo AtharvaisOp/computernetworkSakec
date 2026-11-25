@@ -1,5 +1,5 @@
 const $=id=>document.getElementById(id);
-const shapes={book:'M3 4q4-1 9 2 5-3 9-2v15q-5-1-9 2-4-3-9-2z M12 6v15',road:'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',list:'M9 6h12 M9 12h12 M9 18h12 M3 6l1 1 2-3 M3 12h2 M3 18h2',practice:'M5 3h14v18H5z M8 7h8 M8 12h2 M14 12h2 M8 16h2 M14 16h2',flag:'M6 21V4h12l-3 5 3 5H6',settings:'M4 7h16 M4 17h16 M9 4v6 M15 14v6',file:'M6 2h8l4 4v16H6z M9 11h6 M9 15h6',play:'m7 4 13 8-13 8z',clock:'M12 3a9 9 0 1 0 .01 0 M12 7v6l4 2',check:'m4 12 5 5L20 6',chart:'M3 20h18 M6 16v-4 M12 16V8 M18 16V4',find:'M10 3a7 7 0 1 0 .01 0 M15 15l6 6',down:'m6 9 6 6 6-6',right:'m9 6 6 6-6 6',bookmark:'M6 3h12v18l-6-4-6 4z',note:'M4 4h16v12l-5 5H4z M8 9h8 M8 13h5',moon:'M20 15A9 9 0 0 1 9 3a9 9 0 1 0 11 12z',sun:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M12 3v2 M12 19v2 M3 12h2 M19 12h2 M5.6 5.6l1.5 1.5 M17 17l1.5 1.5 M5.6 18.4l1.5-1.5 M17 7l1.5-1.5'};
+const shapes={account:'M10 17l5-5-5-5 M15 12H3 M13 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6',exit:'M14 7l5 5-5 5 M19 12H7 M11 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h6',book:'M3 4q4-1 9 2 5-3 9-2v15q-5-1-9 2-4-3-9-2z M12 6v15',road:'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',list:'M9 6h12 M9 12h12 M9 18h12 M3 6l1 1 2-3 M3 12h2 M3 18h2',practice:'M5 3h14v18H5z M8 7h8 M8 12h2 M14 12h2 M8 16h2 M14 16h2',flag:'M6 21V4h12l-3 5 3 5H6',settings:'M4 7h16 M4 17h16 M9 4v6 M15 14v6',file:'M6 2h8l4 4v16H6z M9 11h6 M9 15h6',play:'m7 4 13 8-13 8z',clock:'M12 3a9 9 0 1 0 .01 0 M12 7v6l4 2',check:'m4 12 5 5L20 6',chart:'M3 20h18 M6 16v-4 M12 16V8 M18 16V4',find:'M10 3a7 7 0 1 0 .01 0 M15 15l6 6',down:'m6 9 6 6 6-6',right:'m9 6 6 6-6 6',bookmark:'M6 3h12v18l-6-4-6 4z',note:'M4 4h16v12l-5 5H4z M8 9h8 M8 13h5',moon:'M20 15A9 9 0 0 1 9 3a9 9 0 1 0 11 12z',sun:'M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8 M12 3v2 M12 19v2 M3 12h2 M19 12h2 M5.6 5.6l1.5 1.5 M17 17l1.5 1.5 M5.6 18.4l1.5-1.5 M17 7l1.5-1.5'};
 const icon=n=>'<svg aria-hidden="true" viewBox="0 0 24 24"><path d="'+shapes[n]+'"/></svg>';
 document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon));
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -10,8 +10,9 @@ const accountLink=$('accountLink');
 const returnPath=encodeURIComponent(location.pathname+location.hash);
 accountLink.href=(account?'/signout-with-chatgpt':'/signin-with-chatgpt')+'?return_to='+returnPath;
 accountLink.classList.toggle('signOut',Boolean(account));
-accountLink.textContent=account?'Sign out':'Sign in with ChatGPT';
-accountLink.title=account?'Signed in with ChatGPT':'Save progress across devices with ChatGPT';
+const accountLabel=account?'Sign out':'Sign in with ChatGPT';
+accountLink.innerHTML=icon(account?'exit':'account')+'<span class="railLabel">'+accountLabel+'</span>';
+accountLink.title=accountLabel;accountLink.setAttribute('aria-label',accountLabel);
 let state={...defaults},pending={},localOK=true,sync='Checking account storage…',busy=false;
 try{let raw=JSON.parse(localStorage.getItem(storageKey));if(raw){raw.data=migrate(raw.data);raw.pending=migrate(raw.pending)}if(raw&&valid(raw.data)&&valid(raw.pending)){Object.assign(state,raw.data);pending=raw.pending}}catch{localOK=false}
 function persist(){try{localStorage.setItem(storageKey,JSON.stringify({data:state,pending}));localOK=true}catch{localOK=false}}
@@ -81,15 +82,19 @@ function renderPreparationOrder(subject){
  block.hidden=!order.length;
  $('modules').innerHTML=order.map(([n,name])=>'<div class="module"><b>'+String(n).padStart(2,'0')+'</b>'+esc(name)+'</div>').join('');
 }
-$('nav').innerHTML=Object.keys(pages).map(p=>'<button data-page="'+p+'">'+icon(pages[p])+(p==='Lecture roadmap'?'Lectures':p==='Exam planner'?'Schedule':p)+'</button>').join('');
-const mobileMenu=$('pageMenu');
+const pageLabel=p=>p==='Lecture roadmap'?'Lectures':p==='Exam planner'?'Schedule':p;
+$('nav').innerHTML=Object.keys(pages).map(p=>'<button data-page="'+p+'" title="'+pageLabel(p)+'" aria-label="'+pageLabel(p)+'">'+icon(pages[p])+'<span class="railLabel">'+pageLabel(p)+'</span></button>').join('');
+const mobileMenu=$('pageMenu'),sidebarBackdrop=$('sidebarBackdrop');
 function togglePageMenu(open){
- mobileMenu.setAttribute('aria-expanded',String(open));
- $('nav').classList.toggle('menuOpen',open);document.querySelector('aside').classList.toggle('openMenu',open);
+ const label=open?'Collapse sidebar':'Expand sidebar';
+ mobileMenu.setAttribute('aria-expanded',String(open));mobileMenu.setAttribute('aria-label',label);mobileMenu.title=label;
+ document.querySelector('aside').classList.toggle('openMenu',open);sidebarBackdrop.hidden=!open;
+ document.querySelector('main').inert=open;
 }
 mobileMenu.onclick=()=>togglePageMenu(mobileMenu.getAttribute('aria-expanded')!=='true');
+sidebarBackdrop.onclick=()=>{togglePageMenu(false);mobileMenu.focus()};
 document.addEventListener('keydown',event=>{
- if(event.key==='Escape'&&mobileMenu.getAttribute('aria-expanded')==='true'){togglePageMenu(false);mobileMenu.focus()}
+ if(event.key==='Escape'&&mobileMenu.getAttribute('aria-expanded')==='true'&&!$('dialog').open){togglePageMenu(false);mobileMenu.focus()}
 });
 let timerGhost=null,timerReveal=null;
 function timerMorphOrigin(nextPage){
@@ -189,7 +194,8 @@ function render(){$('currentPage').textContent=page==='Exam planner'?'Schedule':
  $('moduleTitle').textContent=study.name;
  $('moduleDescription').textContent=lectures.length+' lectures · '+study.sections.length+' sections · '+study.marks+' of 60 marks (estimated)';
  const masteryButton=$('nav').querySelector('[data-page="Numerical practice"]');
- masteryButton.innerHTML=icon('practice')+study.practiceLabel;
+ masteryButton.querySelector('.railLabel').textContent=study.practiceLabel;
+ masteryButton.title=study.practiceLabel;masteryButton.setAttribute('aria-label',study.practiceLabel);
  if(page==='Lecture roadmap'&&!roadmapManuallyChanged){
   const initial=initialLectureSection(study,state);
   collapsed=new Set(study.sections.filter(s=>s.name!==initial).map(s=>s.name));
