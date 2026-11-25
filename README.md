@@ -56,3 +56,7 @@ The compact exam clock uses the shared IST timetable on study tabs and is hidden
 Overall progress uses a single accessible ring. Preparation order is configured per subject. The next-exam clock moves between the planner and Lectures with a short reduced-motion-aware transition.
 
 Schedule opens on the next exam. Choose another subject to see its exact IST deadline and study page, or return to Next exam. The progress ring animates to saved progress, and the shared timer and theme controls honor reduced motion.
+
+### Optional exam reminders
+
+In Schedule, open **Exam reminders**. Select an upcoming exam and a lead time, then copy the prompt into a ChatGPT chat that supports scheduled tasks and confirm the scheduled time. All times are in India Standard Time. The site does not create tasks, store reminder choices, or send notifications, and it does not offer reminder times that have already passed.

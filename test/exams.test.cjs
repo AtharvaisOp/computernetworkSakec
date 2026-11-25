@@ -49,6 +49,8 @@ test('worker serves the rebrand, exam script and old study interface',async()=>{
  const html=await response.text();
  assert.match(html,/<title>Exam Planner/);
  assert.match(html,/id="examClock"/);
+ assert.match(html,/<details id="examReminders"/);
+ assert.match(html,/id="reminderPrompt" rows="3" readonly/);
  assert.match(html,/id="studyWorkspace"/);
  const url=html.match(/src="(\/exams-[0-9a-f]{12}\.js)"/)?.[1];
  assert.ok(url);
@@ -88,4 +90,17 @@ test('deadline focus defaults to the next exam and respects selected upcoming an
  assert.equal(past.status,'past');
  assert.equal(past.seconds,0);
  assert.equal(read("deadlineSubjectKey(examSchedule[1])"),'cn');
+});
+
+test('one-time reminder uses the exam and reminder dates in IST, including a previous day',()=>{
+ const message=read(`examReminderPrompt(examSchedule[1],1440,Date.parse('2026-11-25T08:30:00Z'))`);
+ assert.match(message,/29 November 2026.*2:00 pm IST.*Computer Networks.*30 November 2026.*2:00 pm IST/i);
+ assert.match(message,/one-time/);
+});
+test('reminder stops offering elapsed lead times and does not invent an exam time',()=>{
+ const now="Date.parse('2026-11-30T07:00:00Z')";
+ assert.equal(read(`examReminderPrompt(examSchedule[1],120,${now})`),'');
+ assert.match(read(`examReminderPrompt(examSchedule[1],60,${now})`),/1:00 pm/i);
+ assert.equal(read(`examReminderPrompt({label:'TBD',date:'2026-12-01'},60,${now})`),'');
+ assert.equal(read(`examReminderPrompt(examSchedule[1],15,${now})`),'');
 });

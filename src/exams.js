@@ -42,6 +42,59 @@ function examFocus(plan,code,now) {
   if(now<examEnd(exam))return {exam,status:exam.startTime?'underway':'today',seconds:0};
   return {exam,status:'past',seconds:0};
 }
+const reminderMinutes=[1440,120,60];
+const reminderFormatter=new Intl.DateTimeFormat('en-IN',{
+  timeZone:'Asia/Kolkata',day:'numeric',month:'long',year:'numeric',hour:'numeric',minute:'2-digit',hour12:true
+});
+function examReminderPrompt(exam,minutes,now) {
+  if(!exam?.startTime||!reminderMinutes.includes(minutes))return '';
+  const start=examStart(exam), remindAt=start-minutes*60000;
+  if(!Number.isFinite(start)||remindAt<=now)return '';
+  const format=time=>reminderFormatter.format(time)+' IST (Asia/Kolkata)';
+  return 'Create a one-time reminder for '+format(remindAt)+' that my '+exam.label+
+    ' exam starts on '+format(start)+'. Please confirm the scheduled date, time, and time zone.';
+}
+function mountExamReminders(root) {
+  const el=id=>root.querySelector('#'+id);
+  const details=el('examReminders'), subject=el('reminderExam'), lead=el('reminderLead'), prompt=el('reminderPrompt');
+  const copy=el('copyReminder'), status=el('reminderStatus'), preview=el('reminderPreview');
+  let listKey='',lastPrompt='';
+  function update(preferred) {
+    if(!details.open)return;
+    const now=Date.now(), upcoming=examSchedule.filter(exam=>reminderMinutes.some(minutes=>examReminderPrompt(exam,minutes,now)));
+    const key=upcoming.map(exam=>exam.code).join('|');
+    if(listKey!==key){
+      const previous=subject.value;
+      subject.replaceChildren(...upcoming.map(exam=>new Option(exam.label,exam.code)));
+      subject.value=upcoming.some(exam=>exam.code===previous)?previous:(upcoming[0]?.code??'');
+      listKey=key;
+    }
+    if(preferred&&upcoming.some(exam=>exam.code===preferred))subject.value=preferred;
+    subject.disabled=lead.disabled=!upcoming.length;
+    const exam=upcoming.find(item=>item.code===subject.value);
+    for(const option of lead.options)option.disabled=Boolean(exam)&&!examReminderPrompt(exam,Number(option.value),now);
+    if(exam&&lead.selectedOptions[0]?.disabled)lead.value=[...lead.options].find(option=>!option.disabled).value;
+    const value=examReminderPrompt(exam,Number(lead.value),now);
+    if(prompt.value!==value)prompt.value=value;
+    preview.hidden=!value;
+    if(!value||value!==lastPrompt)status.textContent=upcoming.length?'':'No reminder times remain for the listed exams.';
+    lastPrompt=value;
+  }
+  details.addEventListener('toggle',()=>update());
+  subject.onchange=lead.onchange=()=>update();
+  copy.onclick=async()=>{
+    update();
+    if(!prompt.value)return;
+    try{
+      await navigator.clipboard.writeText(prompt.value);
+      status.textContent='Copied. Paste it into your ChatGPT chat to set the reminder.';
+    }catch{
+      prompt.focus();prompt.select();
+      status.textContent='Select and copy the prompt manually.';
+    }
+  };
+  return update;
+}
 function mountExamPlanner(root,getSelection=()=>'',onSelect=()=>{}) {
   const el=id=>root.querySelector('#'+id);
   const timeFormatter=new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'numeric',minute:'2-digit',hour12:true});
@@ -50,6 +103,7 @@ function mountExamPlanner(root,getSelection=()=>'',onSelect=()=>{}) {
   const displayDate=exam=>[examDateFormatter.format(examDayStart(exam.date)),formatTime(exam)].filter(Boolean).join(' · ');
   const list=el('examList'), clock=el('examClock'), kicker=el('examKicker');
   const title=el('examNextTitle'), date=el('examNextDate'), hint=el('examClockHint');
+  const updateReminders=mountExamReminders(root);
   const cta=root.querySelector('[data-open-study]'), defaultButton=el('defaultDeadline');
   defaultButton.onclick=()=>onSelect('');
   list.onclick=e=>{
@@ -57,12 +111,14 @@ function mountExamPlanner(root,getSelection=()=>'',onSelect=()=>{}) {
     if(!button)return;
     const code=button.dataset.deadline;
     onSelect(code);
+    updateReminders(code);
     [...list.querySelectorAll('button[data-deadline]')].find(el=>el.dataset.deadline===code)?.focus({preventScroll:true});
   };
   let signature='',clockParts=[];
   function update() {
     if(root.hidden)return;
     const now=Date.now(), plan=getExamPlan(now), selected=getSelection();
+    updateReminders();
     const {exam:next,status,seconds}=examFocus(plan,selected,now);
     const sig=JSON.stringify([selected,next?.code,status,plan.rows]);
     if(signature!==sig){

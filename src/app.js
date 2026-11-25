@@ -9,6 +9,7 @@ const storageKey=account?guestKey+':account:'+account:guestKey;
 const accountLink=$('accountLink');
 const returnPath=encodeURIComponent(location.pathname+location.hash);
 accountLink.href=(account?'/signout-with-chatgpt':'/signin-with-chatgpt')+'?return_to='+returnPath;
+accountLink.classList.toggle('signOut',Boolean(account));
 accountLink.textContent=account?'Sign out':'Sign in with ChatGPT';
 accountLink.title=account?'Signed in with ChatGPT':'Save progress across devices with ChatGPT';
 let state={...defaults},pending={},localOK=true,sync='Checking account storage…',busy=false;

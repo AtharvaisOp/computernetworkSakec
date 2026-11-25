@@ -6,7 +6,7 @@
 </div>
 <div class="examListHeading"><h2>Exam timetable</h2><span>India Standard Time</span><button type="button" id="defaultDeadline" class="quiet" aria-pressed="true">Next exam</button></div>
 <ol class="examList" id="examList"></ol>
-<button type="button" class="examStudyLink" data-open-study>View study materials</button>
+<button type="button" class="examStudyLink" data-open-study>View study materials</button><details id="examReminders" class="examReminders"><summary>Exam reminders</summary><p>Pick an exam and how early you want a reminder. Copy the prompt into your own ChatGPT chat, then check that ChatGPT confirms the time. This site does not create tasks or send notifications.</p><div class="reminderOptions"><label for="reminderExam">Exam<select id="reminderExam"></select></label><label for="reminderLead">Remind me<select id="reminderLead"><option value="1440">1 day before</option><option value="120">2 hours before</option><option value="60">1 hour before</option></select></label></div><div id="reminderPreview" hidden><label for="reminderPrompt">ChatGPT reminder prompt</label><textarea id="reminderPrompt" rows="3" readonly></textarea><button type="button" id="copyReminder" class="quiet">Copy prompt</button></div><p id="reminderStatus" role="status"></p></details>
 </section><div class="wrap" id="studyWorkspace"><section id="studyTimer" class="studyTimer" aria-label="Next exam" hidden>
 <button type="button" id="studyTimerExam" class="studyTimerExam" aria-label="Open exam planner">
 <span class="studyTimerIcon" data-icon="clock"></span><span><span id="studyTimerLabel" class="studyTimerLabel"></span><strong id="studyTimerTitle"></strong></span>
