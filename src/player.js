@@ -4,10 +4,6 @@ const lecturePlayer = (() => {
   let apiReady;
   let returnLink;
 
-  function videoId(lecture) {
-    return lecture.id;
-  }
-
   function stableId(lecture) {
     return lecture.uid;
   }
@@ -37,6 +33,8 @@ const lecturePlayer = (() => {
     if (!active?.ready) return;
     let time;
     try { time = Math.floor(active.player.getCurrentTime()); } catch { return; }
+    if(active.lecture.endSeconds!=null)time=Math.min(time,active.lecture.endSeconds);
+    if(time<(active.lecture.startSeconds??0))return;
     if (Number.isFinite(time) && time >= 0 && (time > 0 || active.played) &&
         time !== get(active.lecture, 'position')) {
       changed({[key(active.lecture, 'position')]: time});
@@ -54,14 +52,16 @@ const lecturePlayer = (() => {
   }
 
   function open(lecture) {
-    if (!lecture || !lectures.includes(lecture)) return;
+    if(!lecture)return;
+    const mod=studyModules[lectureModule(lecture)];
+    const lectures=mod.lectures;
+    if(!lectures.includes(lecture))return;
     const dialog = $('dialog');
     if (!dialog.open) returnLink = document.activeElement?.closest('a[data-watch]');
     stop();
-    const id = videoId(lecture);
     const index = lectures.indexOf(lecture);
-    const start = Math.max(0, Math.floor(Number(get(lecture, 'position')) || 0));
-    changed({'m3/lastActive': stableId(lecture)});
+    const saved=get(lecture,'position');
+    changed({[mod.id+'/lastActive']: stableId(lecture)});
     const body = $('dialogBody');
     body.innerHTML = '<div class="eyebrow" id="playerMeta"></div><h2 id="playerTitle" tabindex="-1"></h2>' +
       '<iframe id="lectureFrame" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe>' +
@@ -72,13 +72,12 @@ const lecturePlayer = (() => {
     const frame = $('lectureFrame');
     frame.style.cssText = 'display:block;width:100%;aspect-ratio:16/9;border:0;border-radius:10px;background:#111';
     frame.title = lecture.title + ' · YouTube video player';
-    const embed = new URL('https://www.youtube.com/embed/' + encodeURIComponent(id));
-    embed.search = new URLSearchParams({enablejsapi:'1',origin:location.origin,playsinline:'1',start:String(start)}).toString();
-    frame.src = embed.href;
-    const fallback = new URL('https://www.youtube.com/watch');
-    fallback.searchParams.set('v', id);
-    if (start) fallback.searchParams.set('t', start + 's');
-    $('youtubeFallback').href = fallback.href;
+    frame.src=youtubeEmbed(lecture,location.origin,saved);
+    $('youtubeFallback').href=youtubeWatch(lecture,saved);
+    if(lecture.endSeconds!=null){
+      const metadata=$('playerMeta');metadata.append(' · Chapter ends at '+new Date(lecture.endSeconds*1000).toISOString().slice(11,19));
+      $('youtubeFallback').after(document.createTextNode(' · YouTube opens at the chapter start or saved position; stop at the chapter end.'));
+    }
     const previous = $('previousLecture'), next = $('nextLecture');
     previous.disabled = index === 0;
     next.disabled = index === lectures.length - 1;
@@ -96,7 +95,12 @@ const lecturePlayer = (() => {
     loadAPI().then(YT => {
       if (active !== session) return;
       session.player = new YT.Player(frame, {events:{
-        onReady() { if (active === session) session.ready = true; },
+        onReady() {
+          if(active!==session)return;
+          session.ready=true;
+          const preferred=state[speedKey(mod.id)]||1;
+          if(session.player.getAvailablePlaybackRates().includes(preferred))session.player.setPlaybackRate(preferred);
+        },
         onStateChange(event) {
           if (active !== session) return;
           if (event.data === YT.PlayerState.PLAYING) session.played = true;
@@ -120,8 +124,7 @@ const lecturePlayer = (() => {
     const anchor = event.target.closest('a[data-watch]');
     if (!anchor || event.defaultPrevented || event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
     const ref = anchor.dataset.watch;
-    const lecture = lectures.find(item => stableId(item) === ref || videoId(item) === ref) ||
-      lectures.find(item => new URL(anchor.href, location.href).searchParams.get('v') === videoId(item));
+    const lecture = currentStudy().lectures.find(item => stableId(item) === ref);
     if (!lecture) return;
     event.preventDefault();
     open(lecture);

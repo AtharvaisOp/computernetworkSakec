@@ -70,3 +70,8 @@ test('date-only fallback reaches midnight IST and remains Today for the full dat
  assert.equal(read(`getExamPlan(Date.parse('2026-11-27T18:30:00Z'),${sample})`).rows[0].status,'Today');
  assert.equal(read(`getExamPlan(Date.parse('2026-11-28T18:30:00Z'),${sample})`).rows[0].status,'Past');
 });
+test('display changes once a second and carries correctly between minutes',()=>{
+ assert.deepEqual(Array.from(read('examClockValues(86461)')),[1,0,1,1]);
+ assert.deepEqual(Array.from(read('examClockValues(86460)')),[1,0,1,0]);
+ assert.deepEqual(Array.from(read('examClockValues(86459)')),[1,0,0,59]);
+});

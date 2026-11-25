@@ -25,15 +25,21 @@ async function flush(){
  if(busy)return;busy=true;
  try{do{const batch={...pending},has=Object.keys(batch).length;const res=await fetch('/progress',has?{method:'PATCH',headers:{'Content-Type':'application/json','X-Notebook-Account':account},body:JSON.stringify(batch)}:{cache:'no-store',headers:{'X-Notebook-Account':account}});if(!res.ok)throw Error();const remote=migrate(await res.json());if(!valid(remote))throw Error();for(const k of Object.keys(batch))if(pending[k]===batch[k])delete pending[k];state={...defaults,...remote,...pending};persist()}while(Object.keys(pending).length);sync='Saved to your account'}catch{sync=localOK?'Saved in this browser · account storage unavailable':'Storage unavailable · export a backup before leaving'}finally{busy=false;if($('sync'))$('sync').textContent=sync;if(!$('dialog').open)render();if(!localOK){$('storageWarning').hidden=false;$('storageWarning').textContent=sync+' · Browser storage unavailable.'}}}
 window.addEventListener('online',flush);window.addEventListener('focus',()=>{if(!$('dialog').open)flush()});
-let page=location.hash.startsWith('#flashcards')?'Flashcards':location.hash==='#computer-networks'?'Lecture roadmap':'Exam planner',filter='All',query='',collapsed=new Set(sections.slice(1).map(s=>s.name));
+const roadmapHash=()=>location.hash.startsWith('#computer-networks')||location.hash.startsWith('#lectures/');
+let page=location.hash.startsWith('#flashcards')?'Flashcards':roadmapHash()?'Lecture roadmap':'Exam planner';
+const studySubjects=[{key:'cn',label:'Computer Networks',modules:['m3','m4']},...examSchedule.filter(e=>e.code!=='C.N.').map(e=>({key:e.code.toLowerCase().replace(/[^a-z]/g,''),label:e.label,modules:[]}))];
+let activeModule=location.hash.endsWith('/m4')?'m4':'m3';
+let activeSubject=studySubjects.find(s=>s.key===location.hash.split('/')[1])?.key||'cn';
+let filter='All',query='',collapsed=new Set(studyModules[activeModule].sections.slice(1).map(s=>s.name));
+const currentStudy=()=>studyModules[activeModule];
 const pages={'Exam planner':'clock','Lecture roadmap':'road','Flashcards':'book','Syllabus coverage':'list','Numerical practice':'practice','Study priorities':'flag'};
 const get=(l,k)=>state[key(l,k)];
-const link=l=>'https://www.youtube.com/watch?v='+l.id;
+const link=l=>youtubeWatch(l);
 const options=(values,current,suffix='')=>values.map(v=>'<option '+(v===current?'selected':'')+' value="'+esc(v)+'">'+esc(v)+suffix+'</option>').join('');
 const bar=(n,total)=>'<div class="bar"><i style="width:'+100*n/total+'%"></i></div>';
 const topicMatch=(l,id)=>l.topicIds.includes(id);
 $('modules').innerHTML=['Network Layer','Transport Layer','Data Link Layer','Intro to Networking'].map((t,i)=>'<div class="module"><b>0'+[3,4,2,1][i]+'</b>'+t+'</div>').join('');
-$('nav').innerHTML=Object.keys(pages).map(p=>'<button data-page="'+p+'">'+icon(pages[p])+p+'</button>').join('');
+$('nav').innerHTML=Object.keys(pages).map(p=>'<button data-page="'+p+'">'+icon(pages[p])+(p==='Lecture roadmap'?'Lectures':p)+'</button>').join('');
 const mobileMenu=$('pageMenu');
 function togglePageMenu(open){
  mobileMenu.setAttribute('aria-expanded',String(open));
@@ -45,13 +51,26 @@ document.addEventListener('keydown',event=>{
 });
 function openPage(nextPage,moveFocus=false){
  page=nextPage;togglePageMenu(false);
- const hash=page==='Flashcards'?'#flashcards':page==='Exam planner'?'':'#computer-networks';
+ const hash=page==='Flashcards'?'#flashcards'+(quizModule==='m4'?'/m4':''):page==='Exam planner'?'':page==='Lecture roadmap'&&activeSubject!=='cn'?'#lectures/'+activeSubject:'#computer-networks'+(activeModule==='m4'?'/m4':'');
  history.replaceState(null,'',location.pathname+location.search+hash);
  render();window.scrollTo(0,0);
  if(moveFocus&&mobileMenu.offsetWidth)mobileMenu.focus({preventScroll:true});
 }
-$('nav').onclick=e=>{const b=e.target.closest('button');if(b)openPage(b.dataset.page,true)};
-document.querySelector('[data-open-study]').onclick=()=>{openPage('Lecture roadmap');const heading=$('studyWorkspace').querySelector('h1');heading.tabIndex=-1;heading.focus({preventScroll:true})};
+$('nav').onclick=e=>{const b=e.target.closest('button');if(b){
+ if(b.dataset.page==='Flashcards')quizModule=activeModule;
+ if(b.dataset.page==='Numerical practice')activeSubject='cn';
+ openPage(b.dataset.page,true);
+}};
+const subjectSelect=$('subjectSelect');
+subjectSelect.innerHTML=studySubjects.map(s=>'<option value="'+s.key+'">'+esc(s.label)+'</option>').join('');
+subjectSelect.onchange=()=>{activeSubject=subjectSelect.value;openPage('Lecture roadmap');subjectSelect.focus({preventScroll:true})};
+$('moduleSwitch').onclick=e=>{
+ const button=e.target.closest('button[data-module]');if(!button||button.dataset.module===activeModule)return;
+ activeSubject='cn';activeModule=button.dataset.module;filter='All';query='';
+ collapsed=new Set(currentStudy().sections.slice(1).map(s=>s.name));
+ openPage(page);button.focus({preventScroll:true});
+};
+document.querySelector('[data-open-study]').onclick=()=>{activeSubject='cn';openPage('Lecture roadmap');const heading=$('moduleTitle');heading.tabIndex=-1;heading.focus({preventScroll:true})};
 const examPlannerView=mountExamPlanner($('examPlanner'));
 function render(){$('currentPage').textContent=page;document.documentElement.classList.toggle('dark',state.theme==='dark');$('theme').innerHTML=icon('moon')+(state.theme==='light'?'Dark mode':'Light mode');document.querySelectorAll('[data-page]').forEach(b=>{b.classList.toggle('active',b.dataset.page===page);b.setAttribute('aria-current',b.dataset.page===page?'page':'false')});
  const planner=page==='Exam planner';
@@ -59,23 +78,42 @@ function render(){$('currentPage').textContent=page;document.documentElement.cla
  document.body.classList.toggle('quizzing', page==='Flashcards');
  document.body.classList.toggle('sectionView',!planner&&page!=='Lecture roadmap'&&page!=='Flashcards');
  if(planner){examPlannerView.update();return}
- if(page==='Flashcards'){renderQuiz();return}
- const remaining=lectures.filter(l=>!get(l,'done')),next=nextLecture(lectures,state,state['m3/lastActive']),done=lectures.length-remaining.length,unknown=remaining.filter(l=>!l.time).length;
- $('nextTitle').textContent=next?next.title:'Roadmap completed';$('nextMeta').textContent=next?'Lecture '+String(next.n).padStart(2,'0')+'  ·  '+next.educator+'  ·  '+(next.time||'Duration unknown'):'All 28 lectures watched';$('resume').style.display=next?'inline-flex':'none';if(next)$('resume').href=link(next);
+ if(page==='Flashcards'){$('studyWorkspace').classList.remove('emptySubject');renderQuiz();return}
+ const subject=studySubjects.find(s=>s.key===activeSubject);
+ const study=currentStudy(), moduleSpeed=speedKey(study.id), lectures=study.lectures;
+ const emptySubject=page==='Lecture roadmap'&&!subject.modules.length;
+ $('moduleSwitch').hidden=emptySubject;
+ $('subjectChooser').hidden=page!=='Lecture roadmap';
+ subjectSelect.value=activeSubject;
+ $('studyWorkspace').classList.toggle('emptySubject',emptySubject);
+ if(emptySubject){
+  $('panel').innerHTML='<div class="panelHead"><h2>'+esc(subject.label)+'</h2></div><p class="empty">No lecture resources have been added for this subject yet.</p>';
+  return;
+ }
+ document.querySelectorAll('[data-module]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.module===study.id)));
+ $('moduleEyebrow').innerHTML='<span class="tick"></span> MODULE 0'+study.id[1]+' · '+study.weight+' estimated';
+ $('moduleTitle').textContent=study.name;
+ $('moduleDescription').textContent=lectures.length+' lectures · '+study.sections.length+' sections · '+study.marks+' of 60 marks (estimated)';
+ const masteryButton=$('nav').querySelector('[data-page="Numerical practice"]');
+ masteryButton.innerHTML=icon('practice')+study.practiceLabel;
+ const {remaining,done,unknown,covered,minutes}=viewingSummary(study,state);
+ const next=nextLecture(lectures,state,state[study.id+'/lastActive']);
+ $('nextTitle').textContent=next?next.title:'Roadmap completed';
+ $('nextMeta').textContent=next?'Lecture '+String(next.n).padStart(2,'0')+' · '+next.educator+' · '+lectureDuration(next):'All '+lectures.length+' lectures watched';
+ $('resume').style.display=next?'inline-flex':'none';if(next)$('resume').href=link(next);
  updateThumbnail(next);
  $('resume').dataset.watch=$('previewLink').dataset.watch=next?.uid||'';
- const covered=topics.filter((_,i)=>lectures.filter(l=>topicMatch(l,'3.'+(i+1))).every(l=>get(l,'done'))).length;
- $('overviewSummary').textContent=covered+' / '+topics.length+' syllabus topics complete · '+practice.filter(p=>state[pk(p)]==='Mastered').length+' / '+practice.length+' numerical skills mastered';
- const minutes=Math.ceil(remaining.reduce((s,l)=>{const [m,t]=l.time.split(':').map(Number);return s+(m*60+(t||0))},0)/60/state.speed);
- $('stats').innerHTML='<div class="stat progressStat" style="--percent:'+(done/lectures.length*100)+'%"><div class="statHead">'+icon('chart')+'Overall progress</div><strong>'+Math.round(done/lectures.length*100)+'%</strong>'+bar(done,lectures.length)+'</div><div class="stat"><div class="statHead">'+icon('check')+'Lectures completed</div><strong>'+done+' <span class="count">/ '+lectures.length+'</span></strong><small>'+remaining.length+' remaining</small></div><div class="stat"><div class="statHead">'+icon('clock')+'Viewing time <select aria-label="Playback speed" id="speed">'+options(speeds,state.speed,'×')+'</select></div><strong>'+Math.floor(minutes/60)+'h '+minutes%60+'m</strong><small>'+(unknown?unknown+' unknown durations excluded':'Remaining at selected speed')+'</small></div>';
- $('speed').onchange=e=>{changed({speed:Number(e.target.value)});render()};renderPanel()}
+ $('overviewSummary').textContent=covered+' / '+study.topics.length+' syllabus topics complete · '+study.practice.filter(p=>state[pk(p,study.id)]==='Mastered').length+' / '+study.practice.length+' '+study.masteryLabel+' mastered';
+ $('stats').innerHTML='<div class="stat progressStat" style="--percent:'+(done/lectures.length*100)+'%"><div class="statHead">'+icon('chart')+'Overall progress</div><strong>'+Math.round(done/lectures.length*100)+'%</strong>'+bar(done,lectures.length)+'</div><div class="stat"><div class="statHead">'+icon('check')+'Lectures completed</div><strong>'+done+' <span class="count">/ '+lectures.length+'</span></strong><small>'+remaining.length+' remaining</small></div><div class="stat"><div class="statHead">'+icon('clock')+'Viewing time <select aria-label="Playback speed" id="speed">'+options(speeds,state[moduleSpeed],'×')+'</select></div><strong>'+Math.floor(minutes/60)+'h '+minutes%60+'m</strong><small>'+(unknown?unknown+' unknown durations excluded':'Remaining at selected speed')+'</small></div>';
+ $('speed').onchange=e=>{changed({[moduleSpeed]:Number(e.target.value)});render()};renderPanel()}
 function updateThumbnail(lecture) {
  const frame=$('previewLink'),image=$('previewImage'),fallback=frame.querySelector('.previewFallback');
  frame.hidden=!lecture;
- if(!lecture || frame.dataset.video===lecture.id)return;
- frame.dataset.video=lecture.id;
+ if(!lecture)return;
  frame.href=link(lecture);
  frame.setAttribute('aria-label','Watch '+lecture.title+' on YouTube');
+ if(frame.dataset.video===lecture.id)return;
+ frame.dataset.video=lecture.id;
  image.hidden=false;fallback.hidden=true;
  const sources=['maxresdefault','sddefault','hqdefault','mqdefault'];
  let attempt=0;
@@ -89,21 +127,23 @@ function updateThumbnail(lecture) {
  loadNext();
 }
 function matches(l){return (filter==='All'||filter==='Completed'&&get(l,'done')||filter==='Incomplete'&&!get(l,'done')||filter==='Revision'&&get(l,'revision'))&&[l.title,l.videoTitle,l.educator,l.sy].join(' ').toLowerCase().includes(query.toLowerCase().trim())}
-function groups(){return sections.map((s,i)=>{let rows=s.rows.filter(matches);if(!rows.length)return '';let count=s.rows.filter(l=>get(l,'done')).length,open=!collapsed.has(s.name);
- return '<article class="group"><button class="groupHead" data-section="'+i+'" aria-expanded="'+open+'"><span class="num">'+String(i+1).padStart(2,'0')+'</span><strong>'+esc(s.name)+'</strong>'+bar(count,s.rows.length)+'<span class="count">'+count+' / '+s.rows.length+'</span>'+icon(open?'down':'right')+'</button>'+(open?rows.map(l=>'<div class="row '+(get(l,'done')?'done':'')+'"><input type="checkbox" data-done="'+l.id+'" aria-label="Completed: '+esc(l.title)+'" '+(get(l,'done')?'checked':'')+'><div class="details"><img class="lectureThumb" loading="lazy" alt="" src="https://i.ytimg.com/vi/'+l.id+'/mqdefault.jpg"><a data-watch="'+l.uid+'" href="'+link(l)+'" target="_blank" rel="noopener" title="'+esc(l.videoTitle)+'">'+esc(l.title)+'</a><small>'+esc(l.sy)+(l.topicIds.some(t=>['3.3','3.4','3.5','3.8','3.9','3.10'].includes(t))?' · Numerical practice':'')+' · '+esc(l.educator)+' · '+(l.time||'Duration unknown')+' · <a class="watchText" data-watch="'+l.uid+'" href="'+link(l)+'">Watch</a></small></div>'+action(l,'note','Personal notes',!!get(l,'note'))+action(l,'revision','Mark for revision',get(l,'revision'))+'</div>').join(''):'')+'</article>'}).join('')||'<p class="empty">No lectures match this view.</p>'}
-function action(l,field,label,on){return '<button class="icon '+(on?'on':'')+'" data-'+field+'="'+l.id+'" aria-label="'+label+' for '+esc(l.title)+'" title="'+label+'" '+(field==='revision'?'aria-pressed="'+on+'"':'')+'>'+icon(field==='revision'?'bookmark':'note')+'</button>'}
+function lectureDuration(l){return (l.startSeconds!=null?'Chapter · ':'')+(l.time||'Duration unknown')}
+function groups(){return currentStudy().sections.map((s,i)=>{let rows=s.rows.filter(matches);if(!rows.length)return '';let count=s.rows.filter(l=>get(l,'done')).length,open=!collapsed.has(s.name);
+ return '<article class="group"><button class="groupHead" data-section="'+i+'" aria-expanded="'+open+'"><span class="num">'+String(i+1).padStart(2,'0')+'</span><strong>'+esc(s.name)+'</strong>'+bar(count,s.rows.length)+'<span class="count">'+count+' / '+s.rows.length+'</span>'+icon(open?'down':'right')+'</button>'+(open?rows.map(l=>'<div class="row '+(get(l,'done')?'done':'')+'"><input type="checkbox" data-done="'+l.uid+'" aria-label="Completed: '+esc(l.title)+'" '+(get(l,'done')?'checked':'')+'><div class="details"><img class="lectureThumb" loading="lazy" alt="" src="https://i.ytimg.com/vi/'+l.id+'/mqdefault.jpg"><a data-watch="'+l.uid+'" href="'+link(l)+'" target="_blank" rel="noopener" title="'+esc(l.videoTitle)+'">'+esc(l.title)+'</a><small>'+esc(l.sy)+(l.topicIds.some(t=>['3.3','3.4','3.5','3.8','3.9','3.10'].includes(t))?' · Numerical practice':'')+' · '+esc(l.educator)+' · '+lectureDuration(l)+' · <a class="watchText" data-watch="'+l.uid+'" href="'+link(l)+'">Watch</a></small></div>'+action(l,'note','Personal notes',!!get(l,'note'))+action(l,'revision','Mark for revision',get(l,'revision'))+'</div>').join(''):'')+'</article>'}).join('')||'<p class="empty">No lectures match this view.</p>'}
+function action(l,field,label,on){return '<button class="icon '+(on?'on':'')+'" data-'+field+'="'+l.uid+'" aria-label="'+label+' for '+esc(l.title)+'" title="'+label+'" '+(field==='revision'?'aria-pressed="'+on+'"':'')+'>'+icon(field==='revision'?'bookmark':'note')+'</button>'}
 function topicDetail(id,matched){
- const n=topicNotes[id];
+ const n=topicNotes[id]??m4Notes[id];
+ if(!n)return '';
  const personal=matched.filter(l=>get(l,'note')).map(l=>'<p><b>'+esc(l.title)+'</b><br>'+esc(get(l,'note'))+'</p>').join('');
  return '<details class="quizReview"><summary>Revision notes · '+id+'</summary><p>'+esc(n.summary)+'</p><p>'+esc(n.formula)+'</p><p>'+esc(n.diagram)+'</p><p><b>'+esc(n.question)+'</b><br>'+esc(n.answer)+'</p>'+personal+'</details>';
 }
-function renderPanel(){let html='<div class="panelHead"><h2>'+page+'</h2>'+(page==='Lecture roadmap'?'<button class="quiet" id="expand">'+(collapsed.size?'Expand all':'Collapse all')+'</button>':'')+'</div>';
+function renderPanel(){const study=currentStudy(),{topics,practice,stages,lectures}=study;let html='<div class="panelHead"><h2>'+(page==='Numerical practice'?study.practiceLabel:page)+'</h2>'+(page==='Lecture roadmap'?'<button class="quiet" id="expand">'+(collapsed.size?'Expand all':'Collapse all')+'</button>':'')+'</div>';
  if(page==='Lecture roadmap'){html+='<div class="tools"><div class="chips">'+['All','Incomplete','Completed','Revision'].map(f=>'<button data-filter="'+f+'" aria-pressed="'+(f===filter)+'" class="'+(f===filter?'active':'')+'">'+f+'</button>').join('')+'</div><label class="search">'+icon('find')+'<input aria-label="Search lectures" id="search" placeholder="Search lectures…" value="'+esc(query)+'"></label></div><div id="groups">'+groups()+'</div>'}
- if(page==='Syllabus coverage')html+='<p class="info">Coverage follows lectures watched. Record your problem-solving mastery in Numerical practice.</p><div class="block">'+topics.map((t,i)=>{let sy='3.'+(i+1),ls=lectures.filter(l=>topicMatch(l,sy)),n=ls.filter(l=>get(l,'done')).length;return '<div class="setting"><span><b>'+sy+'</b> '+esc(t)+'</span><small>'+n+'/'+ls.length+' · '+(n===0?'Not started':n===ls.length?'Completed':'In progress')+'</small></div>'+topicDetail(sy,ls)}).join('')+'</div>';
- if(page==='Numerical practice')html+='<p class="info">Update each skill after solving problems independently.</p><div class="block">'+practice.map(p=>'<label class="setting">'+esc(p)+'<select data-practice="'+pk(p)+'">'+options(stages,state[pk(p)])+'</select></label>').join('')+'</div>';
- if(page==='Study priorities')html+='<div class="block"><h3>Recommended study effort</h3>'+['IPv4, CIDR, subnetting and supernetting','Routing algorithms','NAT, IPv6 and network protocols','Fundamentals and congestion control'].map((t,i)=>'<div class="setting">'+t+'<b>'+[40,30,20,10][i]+'%</b></div>').join('')+'</div><div class="block"><h3>Estimated exam weight · 60 marks</h3>'+['03 · Network Layer','04 · Transport Layer','02 · Data Link Layer','01 · Introduction to Networking'].map((t,i)=>'<div class="setting">'+t+'<span>'+['22.4 marks · 37.33%','19.6 marks · 32.67%','9.6 marks · 16%','8.4 marks · 14%'][i]+'</span></div>').join('')+'</div>';
+ if(page==='Syllabus coverage')html+='<p class="info">Coverage follows lectures marked complete. Track mastery independently in '+study.practiceLabel+'.</p><div class="block">'+topics.map((t,i)=>{let sy=study.id[1]+'.'+(i+1),ls=lectures.filter(l=>topicMatch(l,sy)),n=ls.filter(l=>get(l,'done')).length;return '<div class="setting"><span><b>'+sy+'</b> '+esc(t)+'</span><small>'+n+'/'+ls.length+' · '+(n===0?'Not started':n===ls.length?'Completed':'In progress')+'</small></div>'+topicDetail(sy,ls)}).join('')+'</div>';
+ if(page==='Numerical practice')html+='<p class="info">'+(study.id==='m4'?'Track what you can explain or apply without your notes.':'Update each skill after solving problems independently.')+'</p><div class="block">'+practice.map(p=>'<label class="setting">'+esc(p)+'<select data-practice="'+pk(p,study.id)+'">'+options(stages,state[pk(p,study.id)])+'</select></label>').join('')+'</div>';
+ if(page==='Study priorities')html+=(study.id==='m3'?'<div class="block"><h3>Recommended study effort</h3>'+['IPv4, CIDR, subnetting and supernetting','Routing algorithms','NAT, IPv6 and network protocols','Fundamentals and congestion control'].map((t,i)=>'<div class="setting">'+t+'<b>'+[40,30,20,10][i]+'%</b></div>').join('')+'</div>':'')+'<div class="block"><h3>Estimated exam weight · 60 marks</h3>'+['03 · Network Layer','04 · Transport Layer','02 · Data Link Layer','01 · Introduction to Networking'].map((t,i)=>'<div class="setting">'+t+'<span>'+['22.4 marks · 37.33%','19.6 marks · 32.67%','9.6 marks · 16%','8.4 marks · 14%'][i]+'</span></div>').join('')+'</div>';
  $('panel').innerHTML=html;if($('search'))$('search').oninput=e=>{query=e.target.value;collapsed.clear();$('groups').innerHTML=groups();$('expand').textContent='Collapse all'} }
-$('panel').onclick=e=>{const b=e.target.closest('button,input');if(!b)return;const d=b.dataset;if(d.filter){filter=d.filter;collapsed.clear()}else if(b.id==='expand'){collapsed=collapsed.size?new Set():new Set(sections.map(s=>s.name))}else if(d.section!==undefined){const name=sections[+d.section].name;collapsed.has(name)?collapsed.delete(name):collapsed.add(name)}else if(d.done||d.revision){const l=lectures.find(l=>l.id===(d.done||d.revision)),k=key(l,d.done?'done':'revision');changed({[k]:!state[k]})}else if(d.note){note(lectures.find(l=>l.id===d.note));return}else return;render();if(d.done)document.querySelector('[data-done="'+d.done+'"]')?.closest('.row')?.classList.add('toggled');if(b.dataset.done||b.dataset.revision||b.dataset.section!==undefined||d.filter||b.id==='expand'){const attr=Object.keys(d)[0];(attr?document.querySelector('[data-'+attr+'="'+d[attr]+'"]'):$('expand'))?.focus({preventScroll:true})}};
+$('panel').onclick=e=>{const b=e.target.closest('button,input');if(!b)return;const d=b.dataset,{sections,lectures}=currentStudy();if(d.filter){filter=d.filter;collapsed.clear()}else if(b.id==='expand'){collapsed=collapsed.size?new Set():new Set(sections.map(s=>s.name))}else if(d.section!==undefined){const name=sections[+d.section].name;collapsed.has(name)?collapsed.delete(name):collapsed.add(name)}else if(d.done||d.revision){const l=lectures.find(l=>l.uid===(d.done||d.revision)),k=key(l,d.done?'done':'revision');changed({[k]:!state[k]})}else if(d.note){note(lectures.find(l=>l.uid===d.note));return}else return;render();if(d.done)document.querySelector('[data-done="'+d.done+'"]')?.closest('.row')?.classList.add('toggled');if(b.dataset.done||b.dataset.revision||b.dataset.section!==undefined||d.filter||b.id==='expand'){const attr=Object.keys(d)[0];(attr?document.querySelector('[data-'+attr+'="'+d[attr]+'"]'):$('expand'))?.focus({preventScroll:true})}};
 $('panel').onchange=e=>{if(e.target.dataset.practice)changed({[e.target.dataset.practice]:e.target.value})};
 function modal(html){$('dialogBody').innerHTML=html;$('dialog').showModal()}
 function note(l){modal('<h2>Lecture notes</h2><label>'+esc(l.title)+'<textarea id="memo" maxlength="8000" placeholder="Write your notes…"></textarea></label><small>Changes save as you type.</small>');$('memo').value=get(l,'note');$('memo').oninput=e=>changed({[key(l,'note')]:e.target.value})}

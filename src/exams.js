@@ -29,6 +29,9 @@ function getExamPlan(now, schedule=examSchedule) {
     return {...exam,status:now>=examEnd(exam)?'Past':now>=examStart(exam)?(exam.startTime?'Underway':'Today'):exam===next?'Next':remainingDays+' '+(remainingDays===1?'day':'days')};
   })};
 }
+function examClockValues(seconds) {
+  return [Math.floor(seconds/86400),Math.floor(seconds/3600)%24,Math.floor(seconds/60)%60,seconds%60];
+}
 function mountExamPlanner(root) {
   const el=id=>root.querySelector('#'+id);
   const timeFormatter=new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'numeric',minute:'2-digit',hour12:true});
@@ -48,11 +51,11 @@ function mountExamPlanner(root) {
       title.textContent=next?next.label:'All listed exam dates have passed';
       date.textContent=next?displayDate(next):'Your study materials are still available.';
       clock.replaceChildren();
-      clockParts=(!plan.today.length&&next)?['days','hrs','min'].map(unit=>{
+      clockParts=(!plan.today.length&&next)?['days','hrs','min','sec'].map(unit=>{
         const item=document.createElement('div'), value=document.createElement('strong'), label=document.createElement('span');
         label.textContent=unit;item.append(value,label);clock.append(item);return value;
       }):[];
-      hint.textContent=plan.today.length?(next.startTime?'':'Start time not listed.'):next?(next.startTime?'Counts down to the scheduled start time (IST).':'Counts down to the start of exam day (IST).'):'';
+      hint.textContent=plan.today.length?(next.startTime?'':'Start time not listed.'):next&&!next.startTime?'Counts down to the start of exam day (IST).':'';
       list.replaceChildren(...plan.rows.map(exam=>{
         const item=document.createElement('li'), text=document.createElement('div');
         const name=document.createElement('strong'), when=document.createElement('time'), status=document.createElement('span');
@@ -64,8 +67,7 @@ function mountExamPlanner(root) {
         text.append(name,when);item.append(text,status);return item;
       }));
     }
-    const t=Math.ceil(plan.seconds/60);
-    [Math.floor(t/1440),Math.floor(t/60)%24,t%60].forEach((v,i)=>{
+    examClockValues(plan.seconds).forEach((v,i)=>{
       const output=clockParts[i], label=String(v).padStart(2,'0');
       if(output&&output.textContent!==label)output.textContent=label;
     });
