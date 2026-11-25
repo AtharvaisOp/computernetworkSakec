@@ -24,7 +24,7 @@ button:focus-visible,a:focus-visible,select:focus-visible,input:focus-visible,te
 button:active,#resume:active{transform:translateY(1px) scale(.985)}
 .stat,.group,.block{box-shadow:var(--shadow);border-radius:13px}
 .statHead svg{width:16px;height:16px}.statHead{font-weight:550}.statHead select{border-radius:20px}
-.stat strong{font-variant-numeric:tabular-nums}.progressStat{position:relative}.progressStat:after{content:"";position:absolute;right:15px;top:44%;width:31px;height:31px;border-radius:50%;background:conic-gradient(#6379df var(--percent),var(--active) 0);mask:radial-gradient(circle,transparent 48%,black 51%)}
+.stat strong{font-variant-numeric:tabular-nums}
 .bar{background:var(--active)}.bar i{background:#7388e7}
 .chips{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:3px}.chips .active{background:var(--active)}
 .search:focus-within{box-shadow:0 0 0 3px #8598ea40;border-color:#798cdc}.search input:focus{outline:0}
@@ -33,7 +33,7 @@ button:active,#resume:active{transform:translateY(1px) scale(.985)}
 dialog[open]{box-shadow:0 20px 90px #10173350;animation:dialog-in .18s ease-out}dialog textarea{border:1px solid var(--line);border-radius:8px;color:var(--ink);background:var(--bg)}
 @keyframes dialog-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 #feedback{pointer-events:none;position:fixed;bottom:20px;left:50%;z-index:5;border-radius:12px;background:#222c4e;color:white;padding:10px 18px;box-shadow:0 4px 16px #131c3940;opacity:0;transform:translate(-50%,8px);transition:opacity .18s,transform .18s;font-size:14px}#feedback.visible{opacity:1;transform:translate(-50%,0)}
-@media(max-width:760px){aside{padding-top:12px}.heroText{max-width:72%;padding:20px 16px}.topology{width:40%;right:-3%}.progressStat:after{display:none}.stats{grid-template-columns:repeat(3,minmax(0,1fr))}.statHead{font-size:13px}.icon{min-width:32px}.chips{max-width:100%}.chips button{padding:6px 9px}.brand{font-size:16px}.paper{padding:2px 8px}.hero h2{font-size:25px}.groupHead strong{min-width:0}}
+@media(max-width:760px){aside{padding-top:12px}.heroText{max-width:72%;padding:20px 16px}.topology{width:40%;right:-3%}.stats{grid-template-columns:repeat(3,minmax(0,1fr))}.statHead{font-size:13px}.icon{min-width:32px}.chips{max-width:100%}.chips button{padding:6px 9px}.brand{font-size:16px}.paper{padding:2px 8px}.hero h2{font-size:25px}.groupHead strong{min-width:0}}
 @media(max-width:380px){nav{gap:1px}.stat strong{font-size:21px}.chips{gap:0}.row{gap:4px}.heroText{max-width:76%}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}}
 
@@ -168,3 +168,17 @@ footer .accountLink{display:block;text-align:center;margin:0 0 8px}
  .studyTimerClock>span{padding-inline:4px}
 }
 @media(max-width:350px){.studyTimerIcon{display:none}}
+
+.prepOrder[hidden]{display:none}
+.prepOrder>small{display:block;text-transform:uppercase}
+.progressStat{display:grid;grid-template-rows:auto 1fr;gap:8px}
+.progressRing{--rim:6px;width:clamp(60px,6.4vw,84px);aspect-ratio:1;display:grid;place-items:center;position:relative;align-self:center;justify-self:center;border-radius:50%;background:conic-gradient(var(--green) var(--percent),var(--active) 0)}
+.progressRing:before{content:"";position:absolute;inset:var(--rim);border-radius:50%;background:var(--surface)}
+.progressRing strong{position:relative;margin:0;font-size:clamp(1.05rem,2.4vw,1.5rem);letter-spacing:-.045em;line-height:1}
+.studyTimer{border-color:color-mix(in srgb,var(--green) 28%,var(--line));background:color-mix(in srgb,var(--surface) 92%,var(--active))}
+.studyTimerClock b{color:var(--green)}
+.timerGhost{position:fixed!important;margin:0!important;transform-origin:top left;z-index:1000;pointer-events:none!important;overflow:hidden}
+@media(max-width:520px){
+ .progressStat{gap:5px}
+ .progressRing{width:clamp(49px,15vw,64px);--rim:5px}
+}

@@ -52,3 +52,5 @@ The two chapters of Sundeep Saradhi Kanthety's full course use the same video ID
 Module data lives in `src/data.js` (Module 3) and `src/m4-data.js` (Module 4), with reusable rendering and progress logic. `src/m4-notes.js` is the integration point for revised short notes. Existing Module 3 keys, quiz IDs, sign-in and the hosted storage binding are unchanged.
 
 The compact exam clock uses the shared IST timetable on study tabs and is hidden during active flashcard rounds. Tab transitions honor reduced-motion preferences.
+
+Overall progress uses a single accessible ring. Preparation order is configured per subject. The next-exam clock moves between the planner and Lectures with a short reduced-motion-aware transition.

@@ -27,7 +27,7 @@ async function flush(){
 window.addEventListener('online',flush);window.addEventListener('focus',()=>{if(!$('dialog').open)flush()});
 const roadmapHash=()=>location.hash.startsWith('#computer-networks')||location.hash.startsWith('#lectures/');
 let page=location.hash.startsWith('#flashcards')?'Flashcards':roadmapHash()?'Lecture roadmap':'Exam planner';
-const studySubjects=[{key:'cn',label:'CN',modules:['m3','m4']},...examSchedule.filter(e=>e.code!=='C.N.').map(e=>({key:e.code.toLowerCase().replace(/[^a-z]/g,''),label:e.label,modules:[]}))];
+const studySubjects=[{key:'cn',label:'CN',modules:['m3','m4'],preparationOrder:[[3,'Network Layer'],[4,'Transport Layer'],[2,'Data Link Layer'],[1,'Intro to Networking']]},...examSchedule.filter(e=>e.code!=='C.N.').map(e=>({key:e.code.toLowerCase().replace(/[^a-z]/g,''),label:e.label,modules:[]}))];
 let activeModule=location.hash.endsWith('/m4')?'m4':'m3';
 let activeSubject=studySubjects.find(s=>s.key===location.hash.split('/')[1])?.key||'cn';
 let filter='All',query='',collapsed=new Set(),roadmapManuallyChanged=false;
@@ -48,7 +48,16 @@ const link=l=>youtubeWatch(l);
 const options=(values,current,suffix='')=>values.map(v=>'<option '+(v===current?'selected':'')+' value="'+esc(v)+'">'+esc(v)+suffix+'</option>').join('');
 const bar=(n,total)=>'<div class="bar"><i style="width:'+100*n/total+'%"></i></div>';
 const topicMatch=(l,id)=>l.topicIds.includes(id);
-$('modules').innerHTML=['Network Layer','Transport Layer','Data Link Layer','Intro to Networking'].map((t,i)=>'<div class="module"><b>0'+[3,4,2,1][i]+'</b>'+t+'</div>').join('');
+function progressRing(done,total){
+ const value=Math.max(0,Math.min(100,total?Math.round(100*done/total):0));
+ return '<div class="progressRing" role="progressbar" aria-label="Overall progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+value+'" style="--percent:'+value+'%"><strong>'+value+'%</strong></div>';
+}
+
+function renderPreparationOrder(subject){
+ const order=subject?.preparationOrder??[];
+ $('prepOrder').hidden=!order.length;
+ $('modules').innerHTML=order.map(([n,name])=>'<div class="module"><b>'+String(n).padStart(2,'0')+'</b>'+esc(name)+'</div>').join('');
+}
 $('nav').innerHTML=Object.keys(pages).map(p=>'<button data-page="'+p+'">'+icon(pages[p])+(p==='Lecture roadmap'?'Lectures':p)+'</button>').join('');
 const mobileMenu=$('pageMenu');
 function togglePageMenu(open){
@@ -59,12 +68,44 @@ mobileMenu.onclick=()=>togglePageMenu(mobileMenu.getAttribute('aria-expanded')!=
 document.addEventListener('keydown',event=>{
  if(event.key==='Escape'&&mobileMenu.getAttribute('aria-expanded')==='true'){togglePageMenu(false);mobileMenu.focus()}
 });
+let timerGhost=null,timerReveal=null;
+function timerMorphOrigin(nextPage){
+ if(timerGhost){timerGhost.remove();timerGhost=null}
+ if(timerReveal){timerReveal.cancel();timerReveal=null}
+ if(prefersReducedMotion.matches)return null;
+ const from=page==='Exam planner'&&nextPage==='Lecture roadmap'?$('examSpotlight'):
+  page==='Lecture roadmap'&&nextPage==='Exam planner'?$('studyTimer'):null;
+ if(!from||from.hidden||!from.getClientRects().length)return null;
+ const box=from.getBoundingClientRect();
+ if(box.top>=innerHeight||box.bottom<=0)return null;
+ const ghost=from.cloneNode(true);
+ ghost.removeAttribute('id');ghost.querySelectorAll('[id]').forEach(el=>el.removeAttribute('id'));
+ ghost.inert=true;ghost.setAttribute('aria-hidden','true');
+ ghost.classList.add('timerGhost');
+ Object.assign(ghost.style,{top:box.top+'px',left:box.left+'px',width:box.width+'px',height:box.height+'px'});
+ document.body.append(ghost);timerGhost=ghost;
+ return {box,ghost,target:from===$('examSpotlight')?$('studyTimer'):$('examSpotlight')};
+}
+function morphTimer(from){
+ const {box,ghost,target}=from, to=target.getBoundingClientRect();
+ if(!to.width||!to.height){ghost.remove();if(timerGhost===ghost)timerGhost=null;return}
+ const offset='translate('+(to.left-box.left)+'px,'+(to.top-box.top)+'px) scale('+(to.width/box.width)+','+(to.height/box.height)+')';
+ const settings={duration:330,easing:'cubic-bezier(.22,.8,.26,1)'};
+ const flight=ghost.animate([
+  {transform:'translate(0,0) scale(1)',opacity:1},
+  {opacity:.8,offset:.45},
+  {transform:offset,opacity:0}
+ ],settings);
+ timerReveal=target.animate([{opacity:0},{opacity:.18,offset:.42},{opacity:1}],settings);
+ flight.onfinish=()=>{ghost.remove();if(timerGhost===ghost)timerGhost=null};
+}
 function openPage(nextPage,moveFocus=false){
+ const from=timerMorphOrigin(nextPage);
  if(nextPage==='Lecture roadmap')resetRoadmap();
  page=nextPage;togglePageMenu(false);
  const hash=page==='Flashcards'?'#flashcards'+(playingQuiz?'/'+quizModule:''):page==='Exam planner'?'':page==='Lecture roadmap'&&activeSubject!=='cn'?'#lectures/'+activeSubject:'#computer-networks'+(activeModule==='m4'?'/m4':'');
  history.replaceState(null,'',location.pathname+location.search+hash);
- render();animateStudyView();window.scrollTo(0,0);
+ render();window.scrollTo(0,0);if(from)morphTimer(from);else animateStudyView();
  if(moveFocus&&mobileMenu.offsetWidth)mobileMenu.focus({preventScroll:true});
 }
 $('nav').onclick=e=>{const b=e.target.closest('button');if(b){
@@ -92,6 +133,7 @@ function syncStudyTimer(){
 }
 function render(){$('currentPage').textContent=page;document.documentElement.classList.toggle('dark',state.theme==='dark');$('theme').innerHTML=icon('moon')+(state.theme==='light'?'Dark mode':'Light mode');document.querySelectorAll('[data-page]').forEach(b=>{b.classList.toggle('active',b.dataset.page===page);b.setAttribute('aria-current',b.dataset.page===page?'page':'false')});
  const planner=page==='Exam planner';
+ renderPreparationOrder(studySubjects.find(s=>s.key===activeSubject));
  $('examPlanner').hidden=!planner;$('studyWorkspace').hidden=planner;
  syncStudyTimer();
  document.body.classList.toggle('quizzing', page==='Flashcards');
@@ -127,7 +169,7 @@ function render(){$('currentPage').textContent=page;document.documentElement.cla
  updateThumbnail(next);
  $('resume').dataset.watch=$('previewLink').dataset.watch=next?.uid||'';
  $('overviewSummary').textContent=covered+' / '+study.topics.length+' syllabus topics complete · '+study.practice.filter(p=>state[pk(p,study.id)]==='Mastered').length+' / '+study.practice.length+' '+study.masteryLabel+' mastered';
- $('stats').innerHTML='<div class="stat progressStat" style="--percent:'+(done/lectures.length*100)+'%"><div class="statHead">'+icon('chart')+'Overall progress</div><strong>'+Math.round(done/lectures.length*100)+'%</strong>'+bar(done,lectures.length)+'</div><div class="stat"><div class="statHead">'+icon('check')+'Lectures completed</div><strong>'+done+' <span class="count">/ '+lectures.length+'</span></strong><small>'+remaining.length+' remaining</small></div><div class="stat"><div class="statHead">'+icon('clock')+'Viewing time <select aria-label="Playback speed" id="speed">'+options(speeds,state[moduleSpeed],'×')+'</select></div><strong>'+Math.floor(minutes/60)+'h '+minutes%60+'m</strong><small>'+(unknown?unknown+' unknown durations excluded':'Remaining at selected speed')+'</small></div>';
+ $('stats').innerHTML='<div class="stat progressStat"><div class="statHead">'+icon('chart')+'Overall progress</div>'+progressRing(done,lectures.length)+'</div><div class="stat"><div class="statHead">'+icon('check')+'Lectures completed</div><strong>'+done+' <span class="count">/ '+lectures.length+'</span></strong><small>'+remaining.length+' remaining</small></div><div class="stat"><div class="statHead">'+icon('clock')+'Viewing time <select aria-label="Playback speed" id="speed">'+options(speeds,state[moduleSpeed],'×')+'</select></div><strong>'+Math.floor(minutes/60)+'h '+minutes%60+'m</strong><small>'+(unknown?unknown+' unknown durations excluded':'Remaining at selected speed')+'</small></div>';
  $('speed').onchange=e=>{changed({[moduleSpeed]:Number(e.target.value)});render()};renderPanel()}
 function updateThumbnail(lecture) {
  const frame=$('previewLink'),image=$('previewImage'),fallback=frame.querySelector('.previewFallback');
