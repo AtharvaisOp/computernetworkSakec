@@ -98,3 +98,22 @@ dialog[open]{box-shadow:0 20px 90px #10173350;animation:dialog-in .18s ease-out}
 }
 
 @media(max-width:900px){body.sectionView .wrap>:is(.eyebrow,h1,.sub,.hero,.stats){display:none}body.sectionView .panelHead:first-child{margin-top:0}}
+.srOnly{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+footer .accountLink{display:block;text-align:center;margin:0 0 8px}
+.row input[type=checkbox]{appearance:none;display:grid;place-items:center;width:24px;height:24px;border:1.5px solid var(--muted);border-radius:8px;background:var(--surface);position:relative}
+.row input[type=checkbox]::after{content:"";width:10px;height:6px;border-left:2px solid white;border-bottom:2px solid white;transform:rotate(-45deg) scale(0)}
+.row input[type=checkbox]:checked{background:#397857;border-color:#397857}.row input[type=checkbox]:checked::after{transform:translateY(-1px) rotate(-45deg)}
+@keyframes markLecture{from{opacity:.55;transform:scale(.86)}to{opacity:1;transform:scale(1)}}.row.toggled input{animation:markLecture .18s ease-out}
+.row input[type=checkbox]::before{content:"";position:absolute;inset:-8px}
+.lectureThumb{float:left;width:76px;aspect-ratio:16/9;object-fit:contain;background:#14182b;border-radius:6px;margin:2px 12px 2px 0}
+.overviewSummary{margin:12px 0}.quizzing .overviewSummary,.sectionView .overviewSummary{display:none}
+.playerDialog{width:min(800px,95vw)}#lectureFrame{display:block;border:0;width:100%;aspect-ratio:16/9;background:#111}.playerTools{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:5px;margin:12px 0}.playerTools a,.details small .watchText{color:var(--green)}
+@media(max-width:900px){
+ aside{grid-template-columns:minmax(0,1fr) 44px;gap:0;min-height:62px;padding-block:8px}
+ #pageMenu{grid-column:2;grid-row:1;display:grid;place-items:center;width:44px;padding:0}
+ aside footer{display:none}aside.openMenu nav{margin-top:8px}
+ aside.openMenu footer{position:static;display:flex;align-items:center;flex-wrap:wrap;grid-row:3;grid-column:1/-1;border-top:1px solid var(--line);margin-top:8px;padding-top:8px}
+ aside.openMenu footer .accountLink{margin:0 auto 0 0;display:flex}#pageMenu[aria-expanded=true] svg{transform:none}
+}
+@media(max-width:440px){.lectureThumb{width:60px;margin-right:8px}.playerTools{font-size:14px}}
+@media(prefers-reduced-motion:reduce){.row.toggled input{animation:none}}

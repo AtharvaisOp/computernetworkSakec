@@ -12,7 +12,7 @@ accountLink.href=(account?'/signout-with-chatgpt':'/signin-with-chatgpt')+'?retu
 accountLink.textContent=account?'Sign out':'Sign in with ChatGPT';
 accountLink.title=account?'Signed in with ChatGPT':'Save progress across devices with ChatGPT';
 let state={...defaults},pending={},localOK=true,sync='Checking account storage…',busy=false;
-try{let raw=JSON.parse(localStorage.getItem(storageKey));if(raw&&valid(raw.data)&&valid(raw.pending)){Object.assign(state,raw.data);pending=raw.pending}}catch{localOK=false}
+try{let raw=JSON.parse(localStorage.getItem(storageKey));if(raw){raw.data=migrate(raw.data);raw.pending=migrate(raw.pending)}if(raw&&valid(raw.data)&&valid(raw.pending)){Object.assign(state,raw.data);pending=raw.pending}}catch{localOK=false}
 function persist(){try{localStorage.setItem(storageKey,JSON.stringify({data:state,pending}));localOK=true}catch{localOK=false}}
 function changed(delta){Object.assign(state,delta);Object.assign(pending,delta);persist();flush()}
 async function flush(){
@@ -23,7 +23,7 @@ async function flush(){
   return;
  }
  if(busy)return;busy=true;
- try{do{const batch={...pending},has=Object.keys(batch).length;const res=await fetch('/progress',has?{method:'PATCH',headers:{'Content-Type':'application/json','X-Notebook-Account':account},body:JSON.stringify(batch)}:{cache:'no-store',headers:{'X-Notebook-Account':account}});if(!res.ok)throw Error();const remote=await res.json();if(!valid(remote))throw Error();for(const k of Object.keys(batch))if(pending[k]===batch[k])delete pending[k];state={...defaults,...remote,...pending};persist()}while(Object.keys(pending).length);sync='Saved to your account'}catch{sync=localOK?'Saved in this browser · account storage unavailable':'Storage unavailable · export a backup before leaving'}finally{busy=false;if($('sync'))$('sync').textContent=sync;if(!$('dialog').open)render();if(!localOK){$('storageWarning').hidden=false;$('storageWarning').textContent=sync+' · Browser storage unavailable.'}}}
+ try{do{const batch={...pending},has=Object.keys(batch).length;const res=await fetch('/progress',has?{method:'PATCH',headers:{'Content-Type':'application/json','X-Notebook-Account':account},body:JSON.stringify(batch)}:{cache:'no-store',headers:{'X-Notebook-Account':account}});if(!res.ok)throw Error();const remote=migrate(await res.json());if(!valid(remote))throw Error();for(const k of Object.keys(batch))if(pending[k]===batch[k])delete pending[k];state={...defaults,...remote,...pending};persist()}while(Object.keys(pending).length);sync='Saved to your account'}catch{sync=localOK?'Saved in this browser · account storage unavailable':'Storage unavailable · export a backup before leaving'}finally{busy=false;if($('sync'))$('sync').textContent=sync;if(!$('dialog').open)render();if(!localOK){$('storageWarning').hidden=false;$('storageWarning').textContent=sync+' · Browser storage unavailable.'}}}
 window.addEventListener('online',flush);window.addEventListener('focus',()=>{if(!$('dialog').open)flush()});
 let page=location.hash.startsWith('#flashcards')?'Flashcards':'Lecture roadmap',filter='All',query='',collapsed=new Set(sections.slice(1).map(s=>s.name));
 const pages={'Lecture roadmap':'road','Flashcards':'book','Syllabus coverage':'list','Numerical practice':'practice','Study priorities':'flag'};
@@ -31,13 +31,13 @@ const get=(l,k)=>state[key(l,k)];
 const link=l=>'https://www.youtube.com/watch?v='+l.id;
 const options=(values,current,suffix='')=>values.map(v=>'<option '+(v===current?'selected':'')+' value="'+esc(v)+'">'+esc(v)+suffix+'</option>').join('');
 const bar=(n,total)=>'<div class="bar"><i style="width:'+100*n/total+'%"></i></div>';
-const topicMatch=(l,id)=>l.sy.split('–').includes(id);
+const topicMatch=(l,id)=>l.topicIds.includes(id);
 $('modules').innerHTML=['Network Layer','Transport Layer','Data Link Layer','Intro to Networking'].map((t,i)=>'<div class="module"><b>0'+[3,4,2,1][i]+'</b>'+t+'</div>').join('');
 $('nav').innerHTML=Object.keys(pages).map(p=>'<button data-page="'+p+'">'+icon(pages[p])+p+'</button>').join('');
 const mobileMenu=$('pageMenu');
 function togglePageMenu(open){
  mobileMenu.setAttribute('aria-expanded',String(open));
- $('nav').classList.toggle('menuOpen',open);
+ $('nav').classList.toggle('menuOpen',open);document.querySelector('aside').classList.toggle('openMenu',open);
 }
 mobileMenu.onclick=()=>togglePageMenu(mobileMenu.getAttribute('aria-expanded')!=='true');
 document.addEventListener('keydown',event=>{
@@ -48,9 +48,12 @@ function render(){$('currentPage').textContent=page;document.documentElement.cla
  document.body.classList.toggle('quizzing', page==='Flashcards');
  document.body.classList.toggle('sectionView',page!=='Lecture roadmap' && page!=='Flashcards');
  if(page==='Flashcards'){renderQuiz();return}
- const remaining=lectures.filter(l=>!get(l,'done')),next=remaining[0],done=lectures.length-remaining.length,unknown=remaining.filter(l=>!l.time).length;
+ const remaining=lectures.filter(l=>!get(l,'done')),next=nextLecture(lectures,state,state['m3/lastActive']),done=lectures.length-remaining.length,unknown=remaining.filter(l=>!l.time).length;
  $('nextTitle').textContent=next?next.title:'Roadmap completed';$('nextMeta').textContent=next?'Lecture '+String(next.n).padStart(2,'0')+'  ·  '+next.educator+'  ·  '+(next.time||'Duration unknown'):'All 28 lectures watched';$('resume').style.display=next?'inline-flex':'none';if(next)$('resume').href=link(next);
  updateThumbnail(next);
+ $('resume').dataset.watch=$('previewLink').dataset.watch=next?.uid||'';
+ const covered=topics.filter((_,i)=>lectures.filter(l=>topicMatch(l,'3.'+(i+1))).every(l=>get(l,'done'))).length;
+ $('overviewSummary').textContent=covered+' / '+topics.length+' syllabus topics complete · '+practice.filter(p=>state[pk(p)]==='Mastered').length+' / '+practice.length+' numerical skills mastered';
  const minutes=Math.ceil(remaining.reduce((s,l)=>{const [m,t]=l.time.split(':').map(Number);return s+(m*60+(t||0))},0)/60/state.speed);
  $('stats').innerHTML='<div class="stat progressStat" style="--percent:'+(done/lectures.length*100)+'%"><div class="statHead">'+icon('chart')+'Overall progress</div><strong>'+Math.round(done/lectures.length*100)+'%</strong>'+bar(done,lectures.length)+'</div><div class="stat"><div class="statHead">'+icon('check')+'Lectures completed</div><strong>'+done+' <span class="count">/ '+lectures.length+'</span></strong><small>'+remaining.length+' remaining</small></div><div class="stat"><div class="statHead">'+icon('clock')+'Viewing time <select aria-label="Playback speed" id="speed">'+options(speeds,state.speed,'×')+'</select></div><strong>'+Math.floor(minutes/60)+'h '+minutes%60+'m</strong><small>'+(unknown?unknown+' unknown durations excluded':'Remaining at selected speed')+'</small></div>';
  $('speed').onchange=e=>{changed({speed:Number(e.target.value)});render()};renderPanel()}
@@ -75,15 +78,20 @@ function updateThumbnail(lecture) {
 }
 function matches(l){return (filter==='All'||filter==='Completed'&&get(l,'done')||filter==='Incomplete'&&!get(l,'done')||filter==='Revision'&&get(l,'revision'))&&[l.title,l.videoTitle,l.educator,l.sy].join(' ').toLowerCase().includes(query.toLowerCase().trim())}
 function groups(){return sections.map((s,i)=>{let rows=s.rows.filter(matches);if(!rows.length)return '';let count=s.rows.filter(l=>get(l,'done')).length,open=!collapsed.has(s.name);
- return '<article class="group"><button class="groupHead" data-section="'+i+'" aria-expanded="'+open+'"><span class="num">'+String(i+1).padStart(2,'0')+'</span><strong>'+esc(s.name)+'</strong>'+bar(count,s.rows.length)+'<span class="count">'+count+' / '+s.rows.length+'</span>'+icon(open?'down':'right')+'</button>'+(open?rows.map(l=>'<div class="row '+(get(l,'done')?'done':'')+'"><input type="checkbox" data-done="'+l.id+'" aria-label="Completed: '+esc(l.title)+'" '+(get(l,'done')?'checked':'')+'><div class="details"><a href="'+link(l)+'" target="_blank" rel="noopener" title="'+esc(l.videoTitle)+'">'+esc(l.title)+'</a><small>'+esc(l.sy)+' · '+esc(l.educator)+' · '+(l.time||'Duration unknown')+'</small></div>'+action(l,'note','Personal notes',!!get(l,'note'))+action(l,'revision','Mark for revision',get(l,'revision'))+'</div>').join(''):'')+'</article>'}).join('')||'<p class="empty">No lectures match this view.</p>'}
+ return '<article class="group"><button class="groupHead" data-section="'+i+'" aria-expanded="'+open+'"><span class="num">'+String(i+1).padStart(2,'0')+'</span><strong>'+esc(s.name)+'</strong>'+bar(count,s.rows.length)+'<span class="count">'+count+' / '+s.rows.length+'</span>'+icon(open?'down':'right')+'</button>'+(open?rows.map(l=>'<div class="row '+(get(l,'done')?'done':'')+'"><input type="checkbox" data-done="'+l.id+'" aria-label="Completed: '+esc(l.title)+'" '+(get(l,'done')?'checked':'')+'><div class="details"><img class="lectureThumb" loading="lazy" alt="" src="https://i.ytimg.com/vi/'+l.id+'/mqdefault.jpg"><a data-watch="'+l.uid+'" href="'+link(l)+'" target="_blank" rel="noopener" title="'+esc(l.videoTitle)+'">'+esc(l.title)+'</a><small>'+esc(l.sy)+(l.topicIds.some(t=>['3.3','3.4','3.5','3.8','3.9','3.10'].includes(t))?' · Numerical practice':'')+' · '+esc(l.educator)+' · '+(l.time||'Duration unknown')+' · <a class="watchText" data-watch="'+l.uid+'" href="'+link(l)+'">Watch</a></small></div>'+action(l,'note','Personal notes',!!get(l,'note'))+action(l,'revision','Mark for revision',get(l,'revision'))+'</div>').join(''):'')+'</article>'}).join('')||'<p class="empty">No lectures match this view.</p>'}
 function action(l,field,label,on){return '<button class="icon '+(on?'on':'')+'" data-'+field+'="'+l.id+'" aria-label="'+label+' for '+esc(l.title)+'" title="'+label+'" '+(field==='revision'?'aria-pressed="'+on+'"':'')+'>'+icon(field==='revision'?'bookmark':'note')+'</button>'}
+function topicDetail(id,matched){
+ const n=topicNotes[id];
+ const personal=matched.filter(l=>get(l,'note')).map(l=>'<p><b>'+esc(l.title)+'</b><br>'+esc(get(l,'note'))+'</p>').join('');
+ return '<details class="quizReview"><summary>Revision notes · '+id+'</summary><p>'+esc(n.summary)+'</p><p>'+esc(n.formula)+'</p><p>'+esc(n.diagram)+'</p><p><b>'+esc(n.question)+'</b><br>'+esc(n.answer)+'</p>'+personal+'</details>';
+}
 function renderPanel(){let html='<div class="panelHead"><h2>'+page+'</h2>'+(page==='Lecture roadmap'?'<button class="quiet" id="expand">'+(collapsed.size?'Expand all':'Collapse all')+'</button>':'')+'</div>';
  if(page==='Lecture roadmap'){html+='<div class="tools"><div class="chips">'+['All','Incomplete','Completed','Revision'].map(f=>'<button data-filter="'+f+'" aria-pressed="'+(f===filter)+'" class="'+(f===filter?'active':'')+'">'+f+'</button>').join('')+'</div><label class="search">'+icon('find')+'<input aria-label="Search lectures" id="search" placeholder="Search lectures…" value="'+esc(query)+'"></label></div><div id="groups">'+groups()+'</div>'}
- if(page==='Syllabus coverage')html+='<p class="info">Coverage follows lectures watched. Record your problem-solving mastery in Numerical practice.</p><div class="block">'+topics.map((t,i)=>{let sy='3.'+(i+1),ls=lectures.filter(l=>topicMatch(l,sy)),n=ls.filter(l=>get(l,'done')).length;return '<div class="setting"><span><b>'+sy+'</b> '+esc(t)+'</span><small>'+n+'/'+ls.length+' · '+(n===0?'Not started':n===ls.length?'Completed':'In progress')+'</small></div>'}).join('')+'</div>';
+ if(page==='Syllabus coverage')html+='<p class="info">Coverage follows lectures watched. Record your problem-solving mastery in Numerical practice.</p><div class="block">'+topics.map((t,i)=>{let sy='3.'+(i+1),ls=lectures.filter(l=>topicMatch(l,sy)),n=ls.filter(l=>get(l,'done')).length;return '<div class="setting"><span><b>'+sy+'</b> '+esc(t)+'</span><small>'+n+'/'+ls.length+' · '+(n===0?'Not started':n===ls.length?'Completed':'In progress')+'</small></div>'+topicDetail(sy,ls)}).join('')+'</div>';
  if(page==='Numerical practice')html+='<p class="info">Update each skill after solving problems independently.</p><div class="block">'+practice.map(p=>'<label class="setting">'+esc(p)+'<select data-practice="'+pk(p)+'">'+options(stages,state[pk(p)])+'</select></label>').join('')+'</div>';
  if(page==='Study priorities')html+='<div class="block"><h3>Recommended study effort</h3>'+['IPv4, CIDR, subnetting and supernetting','Routing algorithms','NAT, IPv6 and network protocols','Fundamentals and congestion control'].map((t,i)=>'<div class="setting">'+t+'<b>'+[40,30,20,10][i]+'%</b></div>').join('')+'</div><div class="block"><h3>Estimated exam weight · 60 marks</h3>'+['03 · Network Layer','04 · Transport Layer','02 · Data Link Layer','01 · Introduction to Networking'].map((t,i)=>'<div class="setting">'+t+'<span>'+['22.4 marks · 37.33%','19.6 marks · 32.67%','9.6 marks · 16%','8.4 marks · 14%'][i]+'</span></div>').join('')+'</div>';
  $('panel').innerHTML=html;if($('search'))$('search').oninput=e=>{query=e.target.value;collapsed.clear();$('groups').innerHTML=groups();$('expand').textContent='Collapse all'} }
-$('panel').onclick=e=>{const b=e.target.closest('button,input');if(!b)return;const d=b.dataset;if(d.filter){filter=d.filter;collapsed.clear()}else if(b.id==='expand'){collapsed=collapsed.size?new Set():new Set(sections.map(s=>s.name))}else if(d.section!==undefined){const name=sections[+d.section].name;collapsed.has(name)?collapsed.delete(name):collapsed.add(name)}else if(d.done||d.revision){const l=lectures.find(l=>l.id===(d.done||d.revision)),k=key(l,d.done?'done':'revision');changed({[k]:!state[k]})}else if(d.note){note(lectures.find(l=>l.id===d.note));return}else return;render();if(b.dataset.done||b.dataset.revision||b.dataset.section!==undefined||d.filter||b.id==='expand'){const attr=Object.keys(d)[0];(attr?document.querySelector('[data-'+attr+'="'+d[attr]+'"]'):$('expand'))?.focus({preventScroll:true})}};
+$('panel').onclick=e=>{const b=e.target.closest('button,input');if(!b)return;const d=b.dataset;if(d.filter){filter=d.filter;collapsed.clear()}else if(b.id==='expand'){collapsed=collapsed.size?new Set():new Set(sections.map(s=>s.name))}else if(d.section!==undefined){const name=sections[+d.section].name;collapsed.has(name)?collapsed.delete(name):collapsed.add(name)}else if(d.done||d.revision){const l=lectures.find(l=>l.id===(d.done||d.revision)),k=key(l,d.done?'done':'revision');changed({[k]:!state[k]})}else if(d.note){note(lectures.find(l=>l.id===d.note));return}else return;render();if(d.done)document.querySelector('[data-done="'+d.done+'"]')?.closest('.row')?.classList.add('toggled');if(b.dataset.done||b.dataset.revision||b.dataset.section!==undefined||d.filter||b.id==='expand'){const attr=Object.keys(d)[0];(attr?document.querySelector('[data-'+attr+'="'+d[attr]+'"]'):$('expand'))?.focus({preventScroll:true})}};
 $('panel').onchange=e=>{if(e.target.dataset.practice)changed({[e.target.dataset.practice]:e.target.value})};
 function modal(html){$('dialogBody').innerHTML=html;$('dialog').showModal()}
 function note(l){modal('<h2>Lecture notes</h2><label>'+esc(l.title)+'<textarea id="memo" maxlength="8000" placeholder="Write your notes…"></textarea></label><small>Changes save as you type.</small>');$('memo').value=get(l,'note');$('memo').oninput=e=>changed({[key(l,'note')]:e.target.value})}
@@ -91,7 +99,7 @@ $('close').onclick=()=>$('dialog').close();$('dialog').onclose=render;
 $('theme').onclick=()=>{changed({theme:state.theme==='light'?'dark':'light'});render()};
 $('settings').onclick=()=>{modal('<h2>Backup &amp; settings</h2><p id="sync" role="status"></p><p>Export a JSON copy of your lectures, notes, practice and preferences.</p><button id="export">Export backup</button><button id="import">Import backup</button><input id="backup" type="file" accept=".json,application/json" hidden><p id="notice" role="status"></p><button id="reset">Reset Module 3 progress</button>');$('sync').textContent=sync;
  $('export').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({version:1,data:state},null,2)],{type:'application/json'}));a.download='network-notebook-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};
- $('import').onclick=()=>$('backup').click();$('backup').onchange=async e=>{try{const f=e.target.files[0];if(!f)return;if(f.size>1500000)throw Error();const b=JSON.parse(await f.text());if(b.version!==1||!valid(b.data)||!Object.keys(b.data).length)throw Error();if(confirm('Restore the saved fields from this backup?')){changed(b.data);$('notice').textContent='Backup restored.'}}catch{$('notice').textContent='Invalid backup. Your progress is unchanged.'}e.target.value=''};
+ $('import').onclick=()=>$('backup').click();$('backup').onchange=async e=>{try{const f=e.target.files[0];if(!f)return;if(f.size>1500000)throw Error();const b=JSON.parse(await f.text());b.data=migrate(b.data);if(b.version!==1||!valid(b.data)||!Object.keys(b.data).length)throw Error();if(confirm('Restore the saved fields from this backup?')){changed(b.data);$('notice').textContent='Backup restored.'}}catch{$('notice').textContent='Invalid backup. Your progress is unchanged.'}e.target.value=''};
  $('reset').onclick=()=>{if(confirm('Clear all Module 3 completion, revision marks, notes and numerical practice?')){changed(Object.fromEntries(Object.entries(defaults).filter(([k])=>k.startsWith('m3/'))));$('notice').textContent='Module 3 progress cleared.'}}};
 
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
@@ -119,6 +127,7 @@ render();persist();flush();
 function guestProgress(){
  try{
   const saved=JSON.parse(localStorage.getItem(guestKey));
+  if(saved)saved.data=migrate(saved.data);
   if(!saved || !valid(saved.data))return {};
   return Object.fromEntries(Object.entries(saved.data).filter(([k,v])=>JSON.stringify(v)!==JSON.stringify(defaults[k])));
  }catch{return {}}
@@ -127,7 +136,7 @@ if(account && Object.keys(guestProgress()).length){
  const notice=document.createElement('div');
  notice.className='guestImport';
  notice.innerHTML='<span>This browser has guest progress.</span> <button type="button">Add missing progress to my account</button><small role="status"></small>';
- document.querySelector('header').after(notice);
+ document.querySelector('main').prepend(notice);
  const button=notice.querySelector('button'),label=notice.querySelector('small');
  try{if(localStorage.getItem(storageKey+':imported')===JSON.stringify(guestProgress()))notice.hidden=true}catch{}
  button.onclick=async()=>{

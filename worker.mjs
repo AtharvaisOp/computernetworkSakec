@@ -19,15 +19,15 @@ export default {async fetch(request,env){
  if(!env.BUCKET)return reply({error:'Storage unavailable'},503);
  const objectKey='progress/v1/'+encodeURIComponent(user);
  try{
-  if(request.method==='GET'){const obj=await env.BUCKET.get(objectKey);return reply(obj?await obj.json():{})}
+  if(request.method==='GET'){const obj=await env.BUCKET.get(objectKey);return reply(migrate(obj?await obj.json():{}))}
   if(request.method!=='PATCH')return reply({},405);
   if(request.headers.get('origin')!==url.origin)return reply({},403);
   const body=await request.text();if(body.length>1500000)return reply({},413);
-  let delta;try{delta=JSON.parse(body)}catch{return reply({},400)}
+  let delta;try{delta=migrate(JSON.parse(body))}catch{return reply({},400)}
   if(!valid(delta))return reply({},400);
   for(let i=0;i<5;i++){
    const obj=await env.BUCKET.get(objectKey);
-   const prior=obj?await obj.json():{};
+   const prior=migrate(obj?await obj.json():{});
    const merged=request.headers.get('X-Import-Guest')==='1'?{...delta,...prior}:{...prior,...delta};
    const saved=await env.BUCKET.put(objectKey,JSON.stringify(merged),{onlyIf:obj?{etagMatches:obj.etag}:{etagDoesNotMatch:'*'}});
    if(saved)return reply(merged)
