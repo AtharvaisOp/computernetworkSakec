@@ -1,13 +1,14 @@
-const assert=require('node:assert/strict');
+export {};
+import assert from 'node:assert/strict';
 const {readFileSync}=require('node:fs');
 const path=require('node:path');
-const {test}=require('node:test');
+import {test} from 'node:test';
 const vm=require('node:vm');
-const root=path.join(__dirname,'..');
+const root=path.join(__dirname,'../..');
 const ctx=vm.createContext({});
-vm.runInContext(readFileSync(path.join(root,'src/exams.js'),'utf8'),ctx);
-const read=body=>vm.runInContext(body,ctx);
-const plan=when=>read('getExamPlan(Date.parse('+JSON.stringify(when)+'))');
+vm.runInContext(readFileSync(path.join(root,'.build/src/exams.js'),'utf8'),ctx);
+const read=(body:string)=>vm.runInContext(body,ctx);
+const plan=(when:string):ExamPlan=>read('getExamPlan(Date.parse('+JSON.stringify(when)+'))');
 
 test('all six dates are distinct and match the timetable order',()=>{
  const dates=Array.from(read('examSchedule.map(exam=>exam.date)'));
@@ -20,20 +21,20 @@ test('all six dates are distinct and match the timetable order',()=>{
 });
 test('next exam timer reaches the scheduled IST start independent of browser timezone',()=>{
  const p=plan('2026-11-30T08:29:59Z');
- assert.equal(p.next.code,'C.N.');
+ assert.equal(p.next?.code,'C.N.');
  assert.equal(p.seconds,1);
  assert.equal(p.today.length,0);
 });
 test('exam is underway from the exact start and rolls forward at the exact end',()=>{
  const p=plan('2026-11-30T08:30:00Z');
  assert.equal(p.today[0].code,'C.N.');
- assert.equal(p.next.code,'M.A.D.');
+ assert.equal(p.next?.code,'M.A.D.');
  assert.equal(p.rows[1].status,'Underway');
  assert.equal(p.rows[2].status,'Next');
  const after=plan('2026-11-30T10:30:00Z');
  assert.equal(after.today.length,0);
  assert.equal(after.rows[1].status,'Past');
- assert.equal(after.next.code,'M.A.D.');
+ assert.equal(after.next?.code,'M.A.D.');
 });
 test('post-season state finishes without inventing a later exam',()=>{
  const p=plan('2026-12-31T18:30:00Z');
@@ -44,7 +45,7 @@ test('post-season state finishes without inventing a later exam',()=>{
 test('worker serves the rebrand, exam script and old study interface',async()=>{
  const source=readFileSync(path.join(root,'dist/server/index.js'));
  const {default:worker}=await import('data:text/javascript;base64,'+source.toString('base64'));
- const request=async p=>worker.fetch(new Request('https://planner.test'+p),{});
+ const request=async (p:string)=>worker.fetch(new Request('https://planner.test'+p),{});
  const response=await request('/');
  const html=await response.text();
  assert.match(html,/<title>Exam Planner/);
@@ -61,7 +62,7 @@ test('worker serves the rebrand, exam script and old study interface',async()=>{
 test('a confirmed start time later on exam day replaces midnight as the countdown target',()=>{
  const expr=`getExamPlan(Date.parse('2026-11-28T03:30:00Z'),[{code:'C.D.',date:'2026-11-28',startTime:'10:00'}])`;
  const p=read(expr);
- assert.equal(p.next.code,'C.D.');
+ assert.equal(p.next?.code,'C.D.');
  assert.equal(p.seconds,3600);
  assert.equal(p.today.length,0);
  assert.equal(read(expr.replace('03:30','04:30')).today[0].code,'C.D.');
@@ -80,7 +81,7 @@ test('display changes once a second and carries correctly between minutes',()=>{
 });
 test('deadline focus defaults to the next exam and respects selected upcoming and past exams',()=>{
  const now="2026-11-25T14:00:00+05:30";
- const expr=(code)=>`(()=>{const now=Date.parse('${now}');return examFocus(getExamPlan(now),'${code}',now)})()`;
+ const expr=(code:string)=>`(()=>{const now=Date.parse('${now}');return examFocus(getExamPlan(now),'${code}',now)})()`;
  assert.equal(read(expr('')).exam.code,'C.D.');
  const selected=read(expr('B.I.'));
  assert.equal(selected.exam.code,'B.I.');

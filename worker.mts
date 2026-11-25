@@ -1,3 +1,14 @@
+// These names are supplied by the generated build preamble, not the hosting environment.
+declare const assets:Readonly<Record<string,string>>;
+declare const assetAliases:Readonly<Record<string,string>>;
+interface ProgressObject {etag:string;json():Promise<unknown>}
+type Match = {etagMatches:string}|{etagDoesNotMatch:'*'};
+interface ProgressBucket {
+ get(key:string):Promise<ProgressObject|null>;
+ put(key:string,value:string,options:{onlyIf:Match}):Promise<{etag:string}|null>;
+}
+interface Environment {BUCKET?:ProgressBucket}
+type BodyResult = {status:400|413;data?:never}|{data:unknown;status?:never};
 // Build injects the assets and the same validation used by the dashboard.
 const progressByteLimit=1500000;
 const pagePolicy=[
@@ -12,7 +23,7 @@ const pagePolicy=[
  "form-action 'none'"
 ].join('; ');
 const safeHeaders={'x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin'};
-async function readProgressJSON(request){
+async function readProgressJSON(request:Request):Promise<BodyResult>{
  const reader=request.body?.getReader();
  if(!reader)return {status:400};
  const decoder=new TextDecoder('utf-8',{fatal:true});
@@ -34,7 +45,7 @@ async function readProgressJSON(request){
   return {status:400};
  }finally{reader.releaseLock()}
 }
-export default {async fetch(request,env){
+export default {async fetch(request:Request,env:Environment):Promise<Response>{
  const url=new URL(request.url);
  const user=request.headers.get('oai-authenticated-user-id')||'';
  if(url.pathname!=='/progress'){
@@ -48,7 +59,7 @@ export default {async fetch(request,env){
   }
   return new Response(request.method==='HEAD'?null:assets[path],{headers:{...safeHeaders,'content-type':type+'; charset=utf-8','cache-control':'no-cache'}})
  }
- const reply=(value,status=200)=>Response.json(value,{status,headers:{...safeHeaders,'cache-control':'private, no-store'}});
+ const reply=(value:unknown,status=200)=>Response.json(value,{status,headers:{...safeHeaders,'cache-control':'private, no-store'}});
 
  if(!user)return reply({error:'Sign-in required'},401);
  if(request.headers.get('X-Notebook-Account')!==encodeURIComponent(user))return reply({error:'Account changed'},409);
@@ -68,7 +79,8 @@ export default {async fetch(request,env){
   for(let i=0;i<5;i++){
    const obj=await env.BUCKET.get(objectKey);
    const prior=migrate(obj?await obj.json():{});
-   const merged=request.headers.get('X-Import-Guest')==='1'?{...delta,...prior}:{...prior,...delta};
+   const source=prior as Record<string,unknown>|null;
+   const merged=request.headers.get('X-Import-Guest')==='1'?{...delta,...source}:{...source,...delta};
    const saved=await env.BUCKET.put(objectKey,JSON.stringify(merged),{onlyIf:obj?{etagMatches:obj.etag}:{etagDoesNotMatch:'*'}});
    if(saved)return reply(merged)
   }return reply({},409)

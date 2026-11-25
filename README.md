@@ -6,24 +6,25 @@ An exam timetable with a live India Standard Time countdown and a Computer Netwo
 
 ## Local development
 
-Use Node.js 22 and run these commands from the repository root. The build and tests use built-in Node modules.
+Use Node.js 22 or newer. The app, Worker, build tool and tests are written in TypeScript; TypeScript and the Node type definitions are the only direct development dependencies. Run these commands from the repository root.
 
 ```sh
-node build.mjs
-node --test
+npm ci
+npm run typecheck
+npm test
 ```
 
-To try the browser interface locally, serve the source directory with any static file server. For example, run `python3 -m http.server 8000 --directory src` and open `http://localhost:8000/`. The local preview uses this browser’s guest progress. Account sync requires a hosted Sites identity and storage binding.
+To try the browser interface locally, first run `npm run build`, then serve the generated directory with any static file server. For example, run `python3 -m http.server 8000 --directory dist` and open `http://localhost:8000/`. The local preview uses this browser’s guest progress. Account sync requires a hosted Sites identity and storage binding.
 
 ## Source and storage
 
-Edit the browser assets in `src/`. The build combines these assets with `worker.mjs` to produce the deployable worker in `dist/server/index.js`. The checked-in `.openai/hosting.json` identifies the existing Site and its storage binding. Lecture progress uses stable identifiers so video changes preserve saved work.
+Edit the browser assets in `src/`. The TypeScript compiler checks and emits the maintained source into the ignored `.build/` directory. `build.mts` packages the browser JavaScript, stylesheet and HTML with the compiled `worker.mts` into `dist/server/index.js`, the JavaScript bundle ChatGPT Sites runs. `dist/` is generated; don’t edit it by hand. The browser scripts retain their existing execution order. The checked-in `.openai/hosting.json` identifies the existing Site and its storage binding. Lecture progress uses stable identifiers so video changes preserve saved work.
 
 ## Checks and publication
 
-GitHub Actions builds and tests pushes and pull requests on Ubuntu with Node 22. The Actions workflow only performs validation. GitHub Actions does not deploy the public Site. Start a release from the validated commit on `main`, then save and deploy it through ChatGPT Sites to the existing URL. Verify that the intended version is live.
+GitHub Actions installs the lockfile, type-checks, builds and tests pushes and pull requests on Ubuntu with Node 22, and checks the tracked output against the build. The Actions workflow only performs validation. GitHub Actions does not deploy the public Site. Start a release from the validated commit on `main`, then save and deploy it through ChatGPT Sites to the existing URL. Verify that the intended version is live.
 
-Exam dates and exam windows are in `src/exams.js`. Set `startTime` and `endTime` in 24-hour `HH:MM` IST. The countdown updates every second and targets the scheduled start, shows the exam as underway until the scheduled end, and then highlights the next exam. If an entry has only a date, the planner counts down to the start of that day and marks it “Today” until midnight IST.
+Exam dates and exam windows are in `src/exams.ts`. Set `startTime` and `endTime` in 24-hour `HH:MM` IST. The countdown updates every second and targets the scheduled start, shows the exam as underway until the scheduled end, and then highlights the next exam. If an entry has only a date, the planner counts down to the start of that day and marks it “Today” until midnight IST.
 
 ## Module 4: Transport Layer
 Open **Lectures → Computer Networks → 04 · Transport Layer**. The subject picker abbreviates Computer Networks to **CN**. On opening a roadmap, only the section with the unfinished resume lecture is expanded; all completed roadmaps start collapsed. The other exam subjects are listed in the subject picker and show an empty state until learning resources are added. The roadmap has 16 lectures, six sections, and seven syllabus topics, plus 15 mastery items, a note for each topic, and the existing 50 flashcards.
@@ -49,7 +50,7 @@ Open **Lectures → Computer Networks → 04 · Transport Layer**. The subject p
 
 The two chapters of Sundeep Saradhi Kanthety's full course use the same video ID but separate progress keys. The embedded player uses start/end parameters and valid saved positions. External YouTube URLs include the start or resume timestamp but cannot enforce the end. Opening a video never marks it complete. The embedded player restores position and selects the preferred speed only when YouTube supports those controls.
 
-Module data lives in `src/data.js` (Module 3) and `src/m4-data.js` (Module 4), with reusable rendering and progress logic. `src/m4-notes.js` is the integration point for revised short notes. Existing Module 3 keys, quiz IDs, sign-in and the hosted storage binding are unchanged.
+Module data lives in `src/data.ts` (Module 3) and `src/m4-data.ts` (Module 4), with reusable rendering and progress logic. `src/m4-notes.ts` is the integration point for revised short notes. Existing Module 3 keys, quiz IDs, sign-in and the hosted storage binding are unchanged.
 
 The compact exam clock uses the shared IST timetable on study tabs and is hidden during active flashcard rounds. Tab transitions honor reduced-motion preferences.
 

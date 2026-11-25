@@ -13,7 +13,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Build the Sites Worker
-        run: node build.mjs
-      - name: Run study regression tests
-        run: node --test
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci
+      - name: Type-check the source
+        run: npm run typecheck
+      - name: Build the Sites Worker and run regression tests
+        run: npm test
+      - name: Check that the tracked deployment output matches the build
+        run: git diff --exit-code -- dist

@@ -1,4 +1,4 @@
-const sections=[
+const sections:LectureSection[]=[
  {
   "name": "Network Layer Fundamentals",
   "rows": [

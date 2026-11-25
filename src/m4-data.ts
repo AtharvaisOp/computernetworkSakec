@@ -8,7 +8,8 @@ const m4Concepts = [
   'TCP timers','RTT and RTO basics','DNS hierarchy and resource records','DNS resolution',
   'HTTP','SMTP','Telnet','FTP','Protocol port numbers'
 ];
-const m4Rows = [
+type TransportRow = [number,string,string,string,string,string|null,number?,number?];
+const m4Dataset:TransportRow[] = [
  [1,'4.1','Transport Layer and its Responsibilities','Gate Smashers','kAty4mKczEg','16:11'],
  [2,'4.1','Transport Service Primitives','Sundeep Saradhi Kanthety','lTW0rTfm1Gg','07:19',34576,35015],
  [3,'4.2','TCP and TCP Header — Part 1','Gate Smashers','c8aet11HNxg','14:51'],
@@ -25,10 +26,12 @@ const m4Rows = [
  [14,'4.6','SMTP vs POP3 vs IMAP','Gate Smashers','cjPVlxmf_Vk','10:03'],
  [15,'4.7','Telnet Protocol and Network Virtual Terminal','CodeWithDeb','LAZN4rq-5mI',null],
  [16,'4.7','FTP, SFTP and TFTP','Engineering Funda','CrObzHJtANw','11:13']
-].map(([n,sy,title,educator,id,time,startSeconds=null,endSeconds=null])=>({
-  n,sy,title,videoTitle:title,educator,id,time,uid:'m4-l'+String(n).padStart(2,'0'),topicIds:[sy],startSeconds,endSeconds
+];
+const m4Rows:Lecture[] = m4Dataset.map(([n,sy,title,educator,id,time,startSeconds=null,endSeconds=null])=>({
+  n,sy,title,videoTitle:title,educator,id,time,uid:`m4-l${String(n).padStart(2,'0')}`,topicIds:[sy],startSeconds,endSeconds
 }));
-const m4Sections = [
+const transportSections:[string,number,number][] = [
  ['Transport Layer Fundamentals',1,2],['TCP and UDP',3,6],['Connection Management and Timers',7,8],
  ['Domain Name System',9,11],['HTTP and SMTP',12,14],['Telnet and FTP',15,16]
-].map(([name,start,end])=>({name,rows:m4Rows.slice(start-1,end)}));
+];
+const m4Sections:LectureSection[] = transportSections.map(([name,start,end])=>({name,rows:m4Rows.slice(start-1,end)}));

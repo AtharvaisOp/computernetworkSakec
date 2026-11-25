@@ -1,4 +1,4 @@
-const m4Notes = {
+const m4Notes:Record<string,TopicNote> = {
   '4.1': {
     summary: 'IP delivers to hosts; transport delivers to application processes. Ports identify service and client endpoints. In the textbook connection-oriented model, LISTEN waits for an incoming connection, CONNECT requests one, SEND transmits application data, RECEIVE waits for or reads data, and DISCONNECT closes the connection.',
     formula: 'TCP connection ID = (source IP, source port, destination IP, destination port). Port numbers are 16-bit: 0–65535.',

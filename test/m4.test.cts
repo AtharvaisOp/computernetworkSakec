@@ -1,15 +1,16 @@
-const assert=require('node:assert/strict');
+export {};
+import assert from 'node:assert/strict';
 const {readFileSync}=require('node:fs');
-const {test}=require('node:test');
+import {test} from 'node:test';
 const path=require('node:path');
 const vm=require('node:vm');
-const root=path.join(__dirname,'..');
+const root=path.join(__dirname,'../..');
 const ctx=vm.createContext({URL,URLSearchParams});
 for(const f of ['data.js','m4-data.js','schema.js','quiz-schema.js','cards.js','m4-notes.js']){
- vm.runInContext(readFileSync(path.join(root,'src',f),'utf8'),ctx,{filename:f});
+ vm.runInContext(readFileSync(path.join(root,'.build/src',f),'utf8'),ctx,{filename:f});
 }
-const read=s=>vm.runInContext(s,ctx);
-const normalize=x=>JSON.parse(JSON.stringify(x));
+const read=(s:string)=>vm.runInContext(s,ctx);
+const normalize=(x:string)=>JSON.parse(JSON.stringify(x));
 test('Module 4 has all 16 stable lectures in 6 sections mapped to seven official topics',()=>{
  assert.equal(read('m4Sections.length'),6);
  assert.equal(read('m4Topics.length'),7);
@@ -55,7 +56,7 @@ test('authenticated progress API merges Module 4 changes without overwriting Mod
  const code=readFileSync(path.join(root,'dist/server/index.js')).toString('base64');
  const {default:worker}=await import('data:text/javascript;base64,'+code);
  const rows=new Map([['progress/v1/alice',{'m3/m3-l01/done':true,speed:1.25}],['progress/v1/bob',{'m4/m4-l02/done':true}]]);
- const env={BUCKET:{async get(key){return rows.has(key)?{etag:'same',json:async()=>rows.get(key)}:null},async put(key,body){rows.set(key,JSON.parse(body));return {etag:'new'}}}};
+ const env={BUCKET:{async get(key:string){return rows.has(key)?{etag:'same',json:async()=>rows.get(key)}:null},async put(key:string,body:string){rows.set(key,JSON.parse(body));return {etag:'new'}}}};
  const headers={'oai-authenticated-user-id':'alice','X-Notebook-Account':'alice',origin:'https://planner.test','Content-Type':'application/json; charset=utf-8'};
  const patch=await worker.fetch(new Request('https://planner.test/progress',{method:'PATCH',headers,body:JSON.stringify({'m4/m4-l11/done':true,'m4/practice/tcp-timers':'Mastered','m4/speed':2,'m4/m4-l11/note':'Résumé · अभ्यास 📘'})}),env);
  assert.equal(patch.status,200);

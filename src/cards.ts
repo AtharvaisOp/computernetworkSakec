@@ -1,4 +1,4 @@
-const quizCards=[
+const quizCards:QuizCard[]=[
  {
   "id": "m3-01",
   "topic": "3.1",

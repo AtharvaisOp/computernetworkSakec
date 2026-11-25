@@ -1,10 +1,11 @@
-const quizModules = ['m3','m4'];
+const quizModules:ModuleId[] = ['m3','m4'];
 const cardPattern = /^m[34]-(0[1-9]|[1-4][0-9]|50)$/;
-const roundKey = mod => 'quiz/'+mod+'/round';
-const markKey = id => 'quiz/card/'+id;
-const trackKey = mod => 'quiz/'+mod+'/history';
-const whole = value => Number.isSafeInteger(value) && value >= 0;
-function isRound(value,mod,strict) {
+const roundKey = (mod:ModuleId) => `quiz/${mod}/round` as const;
+const markKey = (id:string) => `quiz/card/${id}` as const;
+const trackKey = (mod:ModuleId) => `quiz/${mod}/history` as const;
+const whole = (value:unknown):value is number => typeof value==='number' && Number.isSafeInteger(value) && value>=0;
+function isRound(input:unknown,mod:string,strict:boolean) {
+ const value=input as Partial<QuizRound>|null;
  if(value===null) return true;
  if(!value || typeof value!=='object' || !Array.isArray(value.cards) || !Array.isArray(value.answers)) return false;
  const count=value.cards.length;
@@ -14,7 +15,7 @@ function isRound(value,mod,strict) {
  whole(value.index) && value.index<=count && value.answers.length>=value.index &&
  value.answers.length<=Math.min(count,value.index+1) && value.answers.every(a=>[0,1,2].includes(a));
 }
-function validQuizValue(k,v,strict) {
+function validQuizValue(k:string,v:unknown,strict:boolean) {
  if(k.startsWith('quiz/card/')) return Array.isArray(v)&&v.length===3&&whole(v[0])&&whole(v[1])&&v[1]<=v[0]&&typeof v[2]==='boolean';
  if(k.endsWith('/round')) return isRound(v,k.split('/')[1],strict);
  return Array.isArray(v)&&v.length<=20&&v.every(r=>Array.isArray(r)&&r.length===3&&whole(r[0])&&r[0]<=8640000000000000&&whole(r[1])&&whole(r[2])&&r[2]>=1&&r[2]<=50&&r[1]<=r[2]);

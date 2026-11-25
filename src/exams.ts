@@ -1,5 +1,5 @@
 // Confirmed exam windows in IST (24-hour format).
-const examSchedule = [
+const examSchedule:Exam[] = [
   { code:'C.D.', label:'C.D.', date:'2026-11-28', startTime:'14:00', endTime:'16:00' },
   { code:'C.N.', label:'Computer Networks', date:'2026-11-30', startTime:'14:00', endTime:'16:00' },
   { code:'M.A.D.', label:'M.A.D.', date:'2026-12-05', startTime:'09:00', endTime:'11:00' },
@@ -11,16 +11,16 @@ const examDayMs = 86400000;
 const examDateFormatter = new Intl.DateTimeFormat('en-IN',{
   timeZone:'Asia/Kolkata',weekday:'short',day:'numeric',month:'short',year:'numeric'
 });
-function examDayStart(date) {
+function examDayStart(date:string) {
   return Date.parse(date+'T00:00:00+05:30');
 }
-function examStart(exam) {
+function examStart(exam:Exam) {
   return exam.startTime ? Date.parse(exam.date+'T'+exam.startTime+':00+05:30') : examDayStart(exam.date);
 }
-function examEnd(exam) {
+function examEnd(exam:Exam) {
   return exam.endTime ? Date.parse(exam.date+'T'+exam.endTime+':00+05:30') : examDayStart(exam.date)+examDayMs;
 }
-function getExamPlan(now, schedule=examSchedule) {
+function getExamPlan(now:number,schedule=examSchedule):ExamPlan {
   const today=schedule.filter(exam=>now>=examStart(exam)&&now<examEnd(exam));
   const next=schedule.find(exam=>now<examStart(exam))??null;
   const seconds=next?Math.max(0,Math.ceil((examStart(next)-now)/1000)):0;
@@ -29,13 +29,13 @@ function getExamPlan(now, schedule=examSchedule) {
     return {...exam,status:now>=examEnd(exam)?'Past':now>=examStart(exam)?(exam.startTime?'Underway':'Today'):exam===next?'Next':remainingDays+' '+(remainingDays===1?'day':'days')};
   })};
 }
-function examClockValues(seconds) {
+function examClockValues(seconds:number) {
   return [Math.floor(seconds/86400),Math.floor(seconds/3600)%24,Math.floor(seconds/60)%60,seconds%60];
 }
-function deadlineSubjectKey(exam) {
+function deadlineSubjectKey(exam:Exam) {
   return exam.code.toLowerCase().replace(/[^a-z]/g,'');
 }
-function examFocus(plan,code,now) {
+function examFocus(plan:ExamPlan,code:string,now:number):ExamFocus {
   const exam=code?plan.rows.find(row=>row.code===code):(plan.today[0]??plan.next);
   if(!exam)return {exam:null,status:'complete',seconds:0};
   if(now<examStart(exam))return {exam,status:'upcoming',seconds:Math.ceil((examStart(exam)-now)/1000)};
@@ -46,20 +46,20 @@ const reminderMinutes=[1440,120,60];
 const reminderFormatter=new Intl.DateTimeFormat('en-IN',{
   timeZone:'Asia/Kolkata',day:'numeric',month:'long',year:'numeric',hour:'numeric',minute:'2-digit',hour12:true
 });
-function examReminderPrompt(exam,minutes,now) {
+function examReminderPrompt(exam:Exam|undefined,minutes:number,now:number) {
   if(!exam?.startTime||!reminderMinutes.includes(minutes))return '';
   const start=examStart(exam), remindAt=start-minutes*60000;
   if(!Number.isFinite(start)||remindAt<=now)return '';
-  const format=time=>reminderFormatter.format(time)+' IST (Asia/Kolkata)';
+  const format=(time:number)=>reminderFormatter.format(time)+' IST (Asia/Kolkata)';
   return 'Create a one-time reminder for '+format(remindAt)+' that my '+exam.label+
     ' exam starts on '+format(start)+'. Please confirm the scheduled date, time, and time zone.';
 }
-function mountExamReminders(root) {
-  const el=id=>root.querySelector('#'+id);
-  const details=el('examReminders'), subject=el('reminderExam'), lead=el('reminderLead'), prompt=el('reminderPrompt');
+function mountExamReminders(root:HTMLElement) {
+  const el=<E extends HTMLElement=HTMLElement>(id:string)=>mustQuery<E>('#'+id,root);
+  const details=el<HTMLDetailsElement>('examReminders'), subject=el<HTMLSelectElement>('reminderExam'), lead=el<HTMLSelectElement>('reminderLead'), prompt=el<HTMLTextAreaElement>('reminderPrompt');
   const copy=el('copyReminder'), status=el('reminderStatus'), preview=el('reminderPreview');
   let listKey='',lastPrompt='';
-  function update(preferred) {
+  function update(preferred?:string) {
     if(!details.open)return;
     const now=Date.now(), upcoming=examSchedule.filter(exam=>reminderMinutes.some(minutes=>examReminderPrompt(exam,minutes,now)));
     const key=upcoming.map(exam=>exam.code).join('|');
@@ -73,7 +73,7 @@ function mountExamReminders(root) {
     subject.disabled=lead.disabled=!upcoming.length;
     const exam=upcoming.find(item=>item.code===subject.value);
     for(const option of lead.options)option.disabled=Boolean(exam)&&!examReminderPrompt(exam,Number(option.value),now);
-    if(exam&&lead.selectedOptions[0]?.disabled)lead.value=[...lead.options].find(option=>!option.disabled).value;
+    if(exam&&lead.selectedOptions[0]?.disabled)lead.value=[...lead.options].find(option=>!option.disabled)?.value??lead.value;
     const value=examReminderPrompt(exam,Number(lead.value),now);
     if(prompt.value!==value)prompt.value=value;
     preview.hidden=!value;
@@ -95,26 +95,26 @@ function mountExamReminders(root) {
   };
   return update;
 }
-function mountExamPlanner(root,getSelection=()=>'',onSelect=()=>{}) {
-  const el=id=>root.querySelector('#'+id);
+function mountExamPlanner(root:HTMLElement,getSelection:()=>string=()=>'',onSelect:(code:string)=>void=()=>{}) {
+  const el=(id:string)=>mustQuery('#'+id,root);
   const timeFormatter=new Intl.DateTimeFormat('en-IN',{timeZone:'Asia/Kolkata',hour:'numeric',minute:'2-digit',hour12:true});
-  const formatTime=exam=>exam.startTime?(exam.endTime?timeFormatter.formatRange(examStart(exam),examEnd(exam)):timeFormatter.format(examStart(exam)))+' IST':'';
+  const formatTime=(exam:Exam)=>exam.startTime?(exam.endTime?timeFormatter.formatRange(examStart(exam),examEnd(exam)):timeFormatter.format(examStart(exam)))+' IST':'';
 
-  const displayDate=exam=>[examDateFormatter.format(examDayStart(exam.date)),formatTime(exam)].filter(Boolean).join(' · ');
+  const displayDate=(exam:Exam)=>[examDateFormatter.format(examDayStart(exam.date)),formatTime(exam)].filter(Boolean).join(' · ');
   const list=el('examList'), clock=el('examClock'), kicker=el('examKicker');
   const title=el('examNextTitle'), date=el('examNextDate'), hint=el('examClockHint');
   const updateReminders=mountExamReminders(root);
-  const cta=root.querySelector('[data-open-study]'), defaultButton=el('defaultDeadline');
+  const cta=mustQuery<HTMLButtonElement>('[data-open-study]',root), defaultButton=el('defaultDeadline');
   defaultButton.onclick=()=>onSelect('');
   list.onclick=e=>{
-    const button=e.target.closest('button[data-deadline]');
+    const button=eventElement(e)?.closest<HTMLButtonElement>('button[data-deadline]');
     if(!button)return;
-    const code=button.dataset.deadline;
+    const code=button.dataset.deadline;if(!code)return;
     onSelect(code);
     updateReminders(code);
-    [...list.querySelectorAll('button[data-deadline]')].find(el=>el.dataset.deadline===code)?.focus({preventScroll:true});
+    [...list.querySelectorAll<HTMLButtonElement>('button[data-deadline]')].find(el=>el.dataset.deadline===code)?.focus({preventScroll:true});
   };
-  let signature='',clockParts=[];
+  let signature='',clockParts:HTMLElement[]=[];
   function update() {
     if(root.hidden)return;
     const now=Date.now(), plan=getExamPlan(now), selected=getSelection();
@@ -131,7 +131,7 @@ function mountExamPlanner(root,getSelection=()=>'',onSelect=()=>{}) {
         const item=document.createElement('div'), value=document.createElement('strong'), label=document.createElement('span');
         label.textContent=unit;item.append(value,label);clock.append(item);return value;
       }):[];
-      hint.textContent=status==='today'?'Start time not listed.':status==='upcoming'&&!next.startTime?'Counts down to the start of exam day (IST).':'';
+      hint.textContent=status==='today'?'Start time not listed.':status==='upcoming'&&!next?.startTime?'Counts down to the start of exam day (IST).':'';
       defaultButton.setAttribute('aria-pressed',String(!selected));
       cta.hidden=!next;
       if(next){
@@ -162,9 +162,9 @@ function mountExamPlanner(root,getSelection=()=>'',onSelect=()=>{}) {
 }
 
 // A separate presentation of the same timetable logic; no independent exam state.
-function mountStudyTimer(root,getSelection=()=>'' ) {
-  const label=root.querySelector('#studyTimerLabel'),title=root.querySelector('#studyTimerTitle');
-  const clock=root.querySelector('#studyTimerClock'), digits=Array.from(clock.querySelectorAll('b'));
+function mountStudyTimer(root:HTMLElement,getSelection:()=>string=()=>'' ) {
+  const label=mustQuery('#studyTimerLabel',root),title=mustQuery('#studyTimerTitle',root);
+  const clock=mustQuery('#studyTimerClock',root), digits=Array.from(clock.querySelectorAll('b'));
   let snapshot='';
   function update(){
     if(root.hidden)return;

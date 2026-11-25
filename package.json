@@ -1,0 +1,15 @@
+{
+  "name": "exam-planner",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {"node": ">=22"},
+  "scripts": {
+    "typecheck": "tsc --noEmit",
+    "build": "tsc && node .build/build.mjs",
+    "test": "npm run build && node --test .build/test/*.test.cjs"
+  },
+  "devDependencies": {
+    "@types/node": "22.15.3",
+    "typescript": "5.9.3"
+  }
+}

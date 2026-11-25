@@ -1,4 +1,4 @@
-const topicNotes = {
+const topicNotes:Record<string,TopicNote> = {
   '3.1': {
     summary: 'Routing computes paths between networks. Forwarding uses the installed routing information to move each packet one hop. IP provides best-effort delivery, so packets can arrive out of order or be lost.',
     formula: 'Destination IP → longest matching prefix → next hop and outgoing interface.',

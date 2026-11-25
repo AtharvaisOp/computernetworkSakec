@@ -1,16 +1,17 @@
-const assert = require('node:assert/strict');
+export {};
+import assert from 'node:assert/strict';
 const { readFileSync } = require('node:fs');
 const path = require('node:path');
-const { test } = require('node:test');
+import {test} from 'node:test';
 const vm = require('node:vm');
 
-const root = path.join(__dirname, '..');
+const root = path.join(__dirname, '../..');
 const scripts = ['data.js', 'm4-data.js', 'schema.js', 'quiz-schema.js', 'cards.js'];
 const study = vm.createContext({});
 for (const name of scripts) {
-  vm.runInContext(readFileSync(path.join(root, 'src', name), 'utf8'), study, {filename: name});
+  vm.runInContext(readFileSync(path.join(root, '.build/src', name), 'utf8'), study, {filename: name});
 }
-const read = expression => vm.runInContext(expression, study);
+const read = (expression:string) => vm.runInContext(expression, study);
 
 test('Module 3 has 28 ordered lectures in seven sections with stable, unique identifiers', () => {
   assert.equal(read('sections.length'), 7);
@@ -50,7 +51,7 @@ test('resume prefers the selected unfinished lecture and falls back in syllabus 
 
 test('each quiz bank has 50 distinct, explained questions with three different answers', () => {
   for (const module of ['m3', 'm4']) {
-    const cards = read('quizCards').filter(card => card.id.startsWith(module + '-'));
+    const cards = (read('quizCards') as QuizCard[]).filter(card => card.id.startsWith(module + '-'));
     assert.equal(cards.length, 50);
     assert.equal(new Set(cards.map(card => card.id)).size, 50);
     assert.equal(new Set(cards.map(card => card.question)).size, 50);
