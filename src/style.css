@@ -117,3 +117,21 @@ footer .accountLink{display:block;text-align:center;margin:0 0 8px}
 }
 @media(max-width:440px){.lectureThumb{width:60px;margin-right:8px}.playerTools{font-size:14px}}
 @media(prefers-reduced-motion:reduce){.row.toggled input{animation:none}}
+
+.examPlanner{max-width:1140px}.examPlanner[hidden],#studyWorkspace[hidden]{display:none}
+.examSpotlight{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,auto);gap:22px;align-items:center;background:#143e34;color:#f5f7eb;border-radius:16px;padding:clamp(18px,3.5vw,36px);margin:24px 0 28px}
+.examKicker{font-size:.875rem;letter-spacing:.1em;color:#d3e7ac;font-weight:750}
+.examLead h2{font:normal clamp(1.75rem,4vw,2.75rem)/1.1 Georgia,serif;margin:.4rem 0;overflow-wrap:anywhere}.examLead p,.examClockHint{color:#cee3d7}
+.examClock{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.examClock>div{min-width:0;background:#265548;text-align:center;padding:6px clamp(5px,1vw,11px);border-radius:8px}
+.examClock strong{display:block;font-variant-numeric:tabular-nums;font-size:clamp(1.2rem,3.2vw,2rem);line-height:1.2}.examClock span,.examClockHint{font-size:.875rem}.examClockHint:not(:empty){margin-top:6px}
+.examListHeading{display:flex;align-items:baseline;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.examListHeading h2{font:normal 1.8rem Georgia,serif}.examListHeading>span{color:var(--muted);font-size:.875rem}
+.examList{display:grid;gap:7px;list-style:none;padding:0;margin:0 0 19px}
+.examList li{display:flex;justify-content:space-between;align-items:center;gap:10px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 13px}
+.examList time{display:block;color:var(--muted);font-size:.875rem}
+.examList :is([data-state=today],[data-state=next],[data-state=underway]){border-color:var(--green)}
+.examStatus{display:inline-block;flex:none;border-radius:12px;background:var(--side);padding:3px 9px;font-size:.875rem;color:var(--muted);white-space:nowrap}
+.examList :is([data-state=today],[data-state=next],[data-state=underway]) .examStatus{background:var(--active);color:var(--green);font-weight:750}
+.examStudyLink{color:var(--green);font-weight:650;min-height:44px}
+@media(max-width:650px){.examSpotlight{grid-template-columns:minmax(0,1fr);gap:14px}.examClock{max-width:420px}.examPlanner h1{font-size:clamp(2.3rem,11vw,3.3rem);letter-spacing:-.05em}}

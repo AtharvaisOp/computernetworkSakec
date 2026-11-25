@@ -25,8 +25,8 @@ async function flush(){
  if(busy)return;busy=true;
  try{do{const batch={...pending},has=Object.keys(batch).length;const res=await fetch('/progress',has?{method:'PATCH',headers:{'Content-Type':'application/json','X-Notebook-Account':account},body:JSON.stringify(batch)}:{cache:'no-store',headers:{'X-Notebook-Account':account}});if(!res.ok)throw Error();const remote=migrate(await res.json());if(!valid(remote))throw Error();for(const k of Object.keys(batch))if(pending[k]===batch[k])delete pending[k];state={...defaults,...remote,...pending};persist()}while(Object.keys(pending).length);sync='Saved to your account'}catch{sync=localOK?'Saved in this browser · account storage unavailable':'Storage unavailable · export a backup before leaving'}finally{busy=false;if($('sync'))$('sync').textContent=sync;if(!$('dialog').open)render();if(!localOK){$('storageWarning').hidden=false;$('storageWarning').textContent=sync+' · Browser storage unavailable.'}}}
 window.addEventListener('online',flush);window.addEventListener('focus',()=>{if(!$('dialog').open)flush()});
-let page=location.hash.startsWith('#flashcards')?'Flashcards':'Lecture roadmap',filter='All',query='',collapsed=new Set(sections.slice(1).map(s=>s.name));
-const pages={'Lecture roadmap':'road','Flashcards':'book','Syllabus coverage':'list','Numerical practice':'practice','Study priorities':'flag'};
+let page=location.hash.startsWith('#flashcards')?'Flashcards':location.hash==='#computer-networks'?'Lecture roadmap':'Exam planner',filter='All',query='',collapsed=new Set(sections.slice(1).map(s=>s.name));
+const pages={'Exam planner':'clock','Lecture roadmap':'road','Flashcards':'book','Syllabus coverage':'list','Numerical practice':'practice','Study priorities':'flag'};
 const get=(l,k)=>state[key(l,k)];
 const link=l=>'https://www.youtube.com/watch?v='+l.id;
 const options=(values,current,suffix='')=>values.map(v=>'<option '+(v===current?'selected':'')+' value="'+esc(v)+'">'+esc(v)+suffix+'</option>').join('');
@@ -43,10 +43,22 @@ mobileMenu.onclick=()=>togglePageMenu(mobileMenu.getAttribute('aria-expanded')!=
 document.addEventListener('keydown',event=>{
  if(event.key==='Escape'&&mobileMenu.getAttribute('aria-expanded')==='true'){togglePageMenu(false);mobileMenu.focus()}
 });
-$('nav').onclick=e=>{const b=e.target.closest('button');if(b){page=b.dataset.page;togglePageMenu(false);history.replaceState(null,'',page==='Flashcards'?'#flashcards':location.pathname);render();if(mobileMenu.offsetWidth){mobileMenu.focus({preventScroll:true});window.scrollTo(0,0)}}};
+function openPage(nextPage,moveFocus=false){
+ page=nextPage;togglePageMenu(false);
+ const hash=page==='Flashcards'?'#flashcards':page==='Exam planner'?'':'#computer-networks';
+ history.replaceState(null,'',location.pathname+location.search+hash);
+ render();window.scrollTo(0,0);
+ if(moveFocus&&mobileMenu.offsetWidth)mobileMenu.focus({preventScroll:true});
+}
+$('nav').onclick=e=>{const b=e.target.closest('button');if(b)openPage(b.dataset.page,true)};
+document.querySelector('[data-open-study]').onclick=()=>{openPage('Lecture roadmap');const heading=$('studyWorkspace').querySelector('h1');heading.tabIndex=-1;heading.focus({preventScroll:true})};
+const examPlannerView=mountExamPlanner($('examPlanner'));
 function render(){$('currentPage').textContent=page;document.documentElement.classList.toggle('dark',state.theme==='dark');$('theme').innerHTML=icon('moon')+(state.theme==='light'?'Dark mode':'Light mode');document.querySelectorAll('[data-page]').forEach(b=>{b.classList.toggle('active',b.dataset.page===page);b.setAttribute('aria-current',b.dataset.page===page?'page':'false')});
+ const planner=page==='Exam planner';
+ $('examPlanner').hidden=!planner;$('studyWorkspace').hidden=planner;
  document.body.classList.toggle('quizzing', page==='Flashcards');
- document.body.classList.toggle('sectionView',page!=='Lecture roadmap' && page!=='Flashcards');
+ document.body.classList.toggle('sectionView',!planner&&page!=='Lecture roadmap'&&page!=='Flashcards');
+ if(planner){examPlannerView.update();return}
  if(page==='Flashcards'){renderQuiz();return}
  const remaining=lectures.filter(l=>!get(l,'done')),next=nextLecture(lectures,state,state['m3/lastActive']),done=lectures.length-remaining.length,unknown=remaining.filter(l=>!l.time).length;
  $('nextTitle').textContent=next?next.title:'Roadmap completed';$('nextMeta').textContent=next?'Lecture '+String(next.n).padStart(2,'0')+'  ·  '+next.educator+'  ·  '+(next.time||'Duration unknown'):'All 28 lectures watched';$('resume').style.display=next?'inline-flex':'none';if(next)$('resume').href=link(next);

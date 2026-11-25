@@ -1,8 +1,8 @@
-# Computer Networks
+# Exam Planner
 
-A Computer Networks exam-preparation dashboard. Module 3 includes an ordered Network Layer lecture roadmap, syllabus coverage, progress, revision bookmarks, notes and numerical practice. The flashcard workspace includes 50 Network Layer questions and 50 Transport Layer questions.
+An exam timetable with a live India Standard Time countdown and a Computer Networks study dashboard. Module 3 includes an ordered Network Layer lecture roadmap, syllabus coverage, progress, revision bookmarks, notes and numerical practice. The flashcard workspace includes 50 Network Layer questions and 50 Transport Layer questions.
 
-[Open Computer Networks](https://network-notebook-study.dependableskink8.chatgpt.site/)
+[Open Exam Planner](https://network-notebook-study.dependableskink8.chatgpt.site/)
 
 ## Local development
 
@@ -21,4 +21,6 @@ Edit the browser assets in `src/`. The build combines these assets with `worker.
 
 ## Checks and publication
 
-GitHub Actions builds and tests pushes and pull requests on Ubuntu with Node 22. The Actions workflow only performs validation. The hourly release process checks the production branch for new changes and uses ChatGPT Sites to publish a validated revision to the existing URL. A push can therefore wait until the next hourly check. Check the release run and the published Site version to confirm a particular revision went live.
+GitHub Actions builds and tests pushes and pull requests on Ubuntu with Node 22. The Actions workflow only performs validation. GitHub Actions does not deploy the public Site. Start a release from the validated commit on `main`, then save and deploy it through ChatGPT Sites to the existing URL. Verify that the intended version is live.
+
+Exam dates and exam windows are in `src/exams.js`. Set `startTime` and `endTime` in 24-hour `HH:MM` IST. The countdown targets the scheduled start, shows the exam as underway until the scheduled end, and then highlights the next exam. If an entry has only a date, the planner counts down to the start of that day and marks it “Today” until midnight IST.
