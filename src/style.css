@@ -56,14 +56,11 @@ dialog[open]{box-shadow:0 20px 90px #10173350;animation:dialog-in .18s ease-out}
 .hero{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:20px 25px}.hero .heroText{order:-1;flex:1;max-width:none;padding:0}.hero .videoWindow{position:relative;display:grid;place-items:center;flex:none;width:min(38%,310px);aspect-ratio:16/9;padding:0;margin:0;overflow:hidden;border-radius:10px;border:3px solid #b1c4ff85;box-shadow:0 7px 20px #11173555;background:#101728;color:white}.videoWindow img{width:100%;height:100%;object-fit:contain;position:absolute;inset:0}.videoPlay{position:absolute;bottom:7px;right:7px;background:#161d36df;border-radius:6px;padding:3px 8px}.previewFallback{font-size:14px;padding:12px}.hero .videoWindow[hidden],.guestImport[hidden]{display:none}.guestImport{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 4%;background:var(--active);font-size:14px}
 @media(max-width:600px){.hero{flex-direction:column;align-items:stretch;padding:17px;gap:15px}.hero .videoWindow{width:min(100%,320px);align-self:center}.accountTools .paper{display:none}.accountLink{font-size:13px}.hero .heroText{max-width:none}}
 
-#pageMenu{display:none}
 @media(max-width:1100px){
  aside{position:static;inset:auto;width:100%;display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:8px;padding:10px max(16px,env(safe-area-inset-right)) 12px max(16px,env(safe-area-inset-left));border:0;border-bottom:1px solid var(--line);overflow:visible;background:var(--side)}
  aside small,#modules{display:none}.brand{min-width:0;font-size:17px}.brand b{flex-shrink:0}
  aside footer{position:static;grid-column:2;grid-row:1;margin:0;padding:0;display:flex;gap:2px}
  footer button{display:grid;place-items:center;font-size:0;gap:0;width:44px;height:44px;padding:0;margin:0}
- #pageMenu{display:flex;grid-column:1/-1;justify-content:space-between;align-items:center;min-height:44px;padding:9px 14px;text-align:left;background:var(--active);color:var(--green);font-weight:650}
- #pageMenu[aria-expanded=true] svg{transform:rotate(180deg)}
  #nav{display:none;grid-column:1/-1;overflow:visible;margin:0}
  #nav.menuOpen{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,185px),1fr));gap:4px}
  #nav button{width:100%;min-height:44px;white-space:normal;font-size:15px;gap:10px}
@@ -111,10 +108,8 @@ dialog.playerDialog{width:min(800px,calc(100% - 32px));max-width:none;max-height
 #lectureFrame{display:block;width:min(100%,max(320px,calc((100dvh - 150px) * 16 / 9)));aspect-ratio:16/9;margin-inline:auto;border:0;border-radius:10px;background:#111}.playerTools{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:5px;margin:12px 0}.playerTools a,.details small .watchText{color:var(--green)}
 @media(max-width:1100px){
  aside{grid-template-columns:minmax(0,1fr) 44px;gap:0;min-height:62px;padding-block:8px}
- #pageMenu{grid-column:2;grid-row:1;display:grid;place-items:center;width:44px;padding:0}
  aside footer{display:none}aside.openMenu nav{margin-top:8px}
  aside.openMenu footer{position:static;display:flex;align-items:center;flex-wrap:wrap;grid-row:3;grid-column:1/-1;border-top:1px solid var(--line);margin-top:8px;padding-top:8px}
- aside.openMenu footer .accountLink{margin:0 auto 0 0;display:flex}#pageMenu[aria-expanded=true] svg{transform:none}
 }
 @media(max-width:440px){.lectureThumb{width:60px;margin-right:8px}.playerTools{font-size:14px}}
 @media(prefers-reduced-motion:reduce){.row.toggled input{animation:none}}
@@ -283,56 +278,102 @@ aside footer .accountLink.signOut{padding-inline:12px}
  .search input,.examReminders select,.examReminders textarea{font-size:1rem}
 }
 
-/* A narrow left rail stays available without taking tablet reading space. */
-:root{--rail:64px;--rail-left:env(safe-area-inset-left,0px)}
-aside,aside.openMenu{
- position:fixed;inset:0 auto 0 0;width:calc(var(--rail) + var(--rail-left));z-index:8;
+/* The same book-button opens the rail; both edges move on the same timing curve. */
+:root{--rail:64px;--rail-inset:env(safe-area-inset-left,0px);--rail-open:clamp(126px,34vw,246px);--rail-motion:260ms cubic-bezier(.22,.72,.24,1)}
+body{--sidebar-size:calc(var(--rail) + var(--rail-inset))}
+body.sidebarExpanded{--sidebar-size:calc(var(--rail-open) + var(--rail-inset))}
+#plannerSidebar{
+ position:fixed;inset:0 auto 0 0;width:var(--sidebar-size);z-index:6;
  display:flex;flex-direction:column;align-items:stretch;gap:0;
- overflow:auto;overscroll-behavior:contain;
- padding:max(10px,env(safe-area-inset-top)) 8px max(10px,env(safe-area-inset-bottom)) calc(8px + var(--rail-left));
+ overflow-y:auto;overflow-x:hidden;overscroll-behavior:contain;
+ padding:max(10px,env(safe-area-inset-top)) 7px max(10px,env(safe-area-inset-bottom)) calc(7px + var(--rail-inset));
  border:0;border-right:1px solid var(--line);background:var(--side);
+ transition:width var(--rail-motion);
 }
-aside.openMenu{
- width:min(calc(100% - 32px),calc(254px + var(--rail-left)));padding-inline:calc(12px + var(--rail-left)) 12px;
- box-shadow:14px 0 36px #10173326;
-}
-aside .brand,aside>.workspaceLabel,aside:not(.openMenu) .prepOrder,aside:not(.openMenu) .railLabel{display:none}
-aside.openMenu .brand{display:flex;min-height:44px;margin-bottom:6px;padding:0 5px}
-aside.openMenu .prepOrder:not([hidden]){display:block}
-aside.openMenu .prepOrder>small,aside.openMenu #modules{display:block}
-aside.openMenu .prepOrder>small{margin:16px 8px 5px}
 #pageMenu{
- display:grid;place-items:center;flex:none;width:44px;height:44px;margin:0 auto 8px;
- padding:0;border:1px solid var(--line);border-radius:10px;background:var(--surface);color:var(--green);
+ display:flex;align-items:center;justify-content:flex-start;flex:none;gap:clamp(5px,1vw,12px);
+ width:100%;height:46px;margin:0 0 10px;padding:0;
+ border:1px solid transparent;border-radius:10px;background:transparent;color:var(--ink);
+ text-align:left;overflow:hidden;
 }
-aside.openMenu #pageMenu{margin:0 auto 8px 0}
-#nav,#nav.menuOpen{display:flex;flex-direction:column;gap:3px;overflow:visible;margin:0}
-#nav button{display:flex;justify-content:center;flex:none;gap:0;min-height:44px;width:100%;padding:6px;margin:0}
-#nav button svg,aside footer .accountLink svg{display:block;flex:none;width:20px;height:20px}
-aside.openMenu #nav button{justify-content:flex-start;gap:12px;padding-inline:10px}
+#pageMenu .brandLabel{font-size:clamp(.88rem,1.5vw,1.08rem);line-height:1.15;font-weight:750;letter-spacing:-.025em;white-space:normal}
+#pageMenu b{flex:0 0 36px;width:36px;height:36px;padding:0;display:grid;place-items:center;margin-inline-start:max(3px,calc((var(--rail) - 52px) / 2));border-radius:9px}
+#pageMenu b svg{width:21px;height:21px}
+#pageMenu:hover,#pageMenu:focus-visible{background:var(--active)}
+#plannerSidebar #nav{display:flex;flex-direction:column;gap:3px;overflow:visible;margin:0}
+#plannerSidebar #nav button{
+ display:flex;justify-content:flex-start;align-items:center;flex:none;gap:clamp(5px,1vw,12px);
+ width:100%;min-height:44px;padding:6px 1px 6px calc((var(--rail) - 36px) / 2);margin:0;
+ font-size:clamp(.85rem,1.3vw,.96rem);line-height:1.2;white-space:normal;overflow:hidden;
+}
+#nav button svg,#plannerSidebar footer .accountLink svg{display:block;flex:none;width:20px;height:20px}
 #nav button.active{box-shadow:inset 2px 0 var(--green)}
-aside footer,aside:not(.openMenu) footer,aside.openMenu footer{
- position:static;display:flex;justify-content:center;align-items:center;gap:7px;
- margin: auto 0 0;padding:12px 0 0;border:0;
+#plannerSidebar .railLabel{
+ opacity:0;visibility:hidden;transform:translateX(-5px);max-inline-size:0;overflow:hidden;
+ transition:opacity 120ms ease,transform 180ms ease,visibility 120ms,max-inline-size var(--rail-motion);
 }
-aside:not(.openMenu) footer{flex-direction:column}
-aside footer .accountLink,aside.openMenu footer .accountLink{
- flex:none;min-width:44px;min-height:44px;margin:0;padding:0;gap:7px;
+.sidebarExpanded #plannerSidebar .railLabel{opacity:1;visibility:visible;transform:none;max-inline-size:195px;transition-delay:65ms,45ms,0ms,0ms}
+#plannerSidebar .prepOrder{max-block-size:0;overflow:hidden;visibility:hidden;opacity:0;transition:max-block-size var(--rail-motion),opacity 160ms ease,visibility 160ms}
+.sidebarExpanded #plannerSidebar .prepOrder:not([hidden]){max-block-size:255px;visibility:visible;opacity:1}
+#plannerSidebar .prepOrder>small,#plannerSidebar #modules{display:block}
+#plannerSidebar .prepOrder>small{margin:16px 4px 5px;letter-spacing:.05em}
+#plannerSidebar .module{margin:9px 4px;gap:5px;font-size:clamp(.72rem,1.1vw,.875rem)}
+#plannerSidebar footer{
+ position:static;display:grid;align-items:center;justify-content:center;justify-items:center;
+ gap:7px;margin:auto 0 0;padding:12px 0 0;border:0;
 }
-aside.openMenu footer .accountLink{padding-inline:10px}
-aside footer .themeToggle{margin:0}
-#sidebarBackdrop{position:fixed;inset:0;width:100%;height:100%;z-index:7;border:0;border-radius:0;background:#121a324d}
-#sidebarBackdrop[hidden]{display:none}
-main{margin:0 0 0 calc(var(--rail) + var(--rail-left));min-width:0}
+#plannerSidebar footer .accountLink{min-width:44px;min-height:44px;margin:0;padding:0 5px;gap:0}
+.sidebarExpanded #plannerSidebar footer .accountLink{gap:5px}
+#plannerSidebar footer .themeToggle{margin:0}
+#plannerSidebar+main{margin:0 0 0 var(--sidebar-size);min-width:0;transition:margin-left var(--rail-motion);container:planner / inline-size}
+.wrap{width:100%;max-width:none}
+@media(min-width:560px){
+ .sidebarExpanded #plannerSidebar footer{grid-template-columns:auto auto}
+ .sidebarExpanded #plannerSidebar footer .accountLink{padding-inline:8px}
+}
 @media(max-width:640px){
  :root{--rail:54px}
- aside,aside.openMenu{padding-inline:calc(5px + var(--rail-left)) 4px}
- aside.openMenu{padding-inline:calc(12px + var(--rail-left)) 12px}
- aside footer .themeToggle{min-width:44px;width:44px;height:44px}
- .wrap{padding-inline:12px}
+ #plannerSidebar{padding-inline:calc(4px + var(--rail-inset)) 4px}
+ #plannerSidebar footer .themeToggle{min-width:44px;width:44px;height:44px}
+}
+@media(prefers-reduced-motion:reduce){
+ #plannerSidebar,#plannerSidebar+main,#plannerSidebar .railLabel,#plannerSidebar .prepOrder{transition:none}
+}
+@container planner (max-width:700px){
+ .wrap{padding-inline:clamp(10px,3%,24px)}
+ .examSpotlight{grid-template-columns:minmax(0,1fr);gap:14px}
+ .hero .videoWindow{width:min(40%,320px)}
+}
+@container planner (max-width:510px){
+ .hero{flex-direction:column;align-items:stretch}
+ .hero .videoWindow{width:min(100%,400px);align-self:center}
+ .stats{grid-template-columns:repeat(2,minmax(0,1fr))}
+ .stats>.stat:last-child{grid-column:1/-1}
  .studyTimer{flex-wrap:wrap}
  .studyTimerClock{margin-inline-start:auto}
+ .row{grid-template-columns:36px minmax(0,1fr) 44px 44px}
+ .deckGrid{grid-template-columns:minmax(0,1fr)}
+ .reminderOptions{grid-template-columns:1fr}
+}
+@container planner (max-width:315px){
  .examListHeading{column-gap:7px}
- .examListHeading h2{font-size:clamp(1.3rem,6vw,1.8rem)}
+ .examListHeading h2{font-size:1.35rem}
  .examListHeading>span{margin-inline-start:0}
+ .examSpotlight{padding:13px}
+ .examClock{grid-template-columns:repeat(4,minmax(0,1fr));gap:3px}
+ .examClock>div{min-width:0;padding-inline:2px}
+ .examClock span{font-size:.72rem}
+ .examChoice{padding-inline:7px;gap:5px}
+ .examStatus{padding-inline:6px;font-size:.75rem}
+ .row{display:grid;grid-template-columns:minmax(0,1fr) 44px 44px}
+ .row .details{grid-column:1/-1;grid-row:1}
+ .row .icon:nth-last-child(2){grid-column:2}
+ .row .icon:last-child{grid-column:3}
+ .groupHead{gap:7px}
+ .groupHead .bar{display:none}
+ .stat{padding:8px}
+ .studyTimerClock>span{padding-inline:2px}
+ .studyTimerClock small{font-size:.75rem}
+ .setting{flex-wrap:wrap}
+ .quizActions button{min-width:0}
 }

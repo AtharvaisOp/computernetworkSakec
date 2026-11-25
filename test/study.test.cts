@@ -119,3 +119,17 @@ test('new quiz writes use the supported shape and ordinary older reads stay comp
   return valid({'quiz/m3/round':validRound},true)&&valid({'quiz/m3/round':olderRound})&&!valid({'quiz/m3/round':olderRound},true);
  })()`));
 });
+
+test('only verified runtime values are used for the six reviewed lectures', () => {
+ const durations=read(`[m4Rows.find(l=>l.uid==='m4-l15').time,
+   ...[15,19,25,26,27].map(n=>lectures.find(l=>l.n===n).time)]`) as (string|null)[];
+ assert.deepEqual(Array.from(durations),['5:21','22:16','','9:40','13:39','9:16']);
+});
+
+test('the stable book toggle replaces the old overlay and keeps the viewing-time notice out of the UI', () => {
+ const index=readFileSync(path.join(root,'dist/index.html'),'utf8');
+ const app=readFileSync(path.join(root,'dist/app.js'),'utf8');
+ assert.match(index,/id="pageMenu" class="brand"[^>]*><b data-icon="book"><\/b>/);
+ assert.doesNotMatch(index,/sidebarBackdrop/);
+ assert.doesNotMatch(app,/unknown durations excluded/);
+});

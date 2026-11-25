@@ -24,7 +24,7 @@ const m4Dataset:TransportRow[] = [
  [12,'4.6','HTTP and HTTPS','Engineering Funda','r4VY6K3jo5s','13:52'],
  [13,'4.6','Persistent vs Non-Persistent HTTP','Gate Smashers','zRUdSu3JlK8','07:51'],
  [14,'4.6','SMTP vs POP3 vs IMAP','Gate Smashers','cjPVlxmf_Vk','10:03'],
- [15,'4.7','Telnet Protocol and Network Virtual Terminal','CodeWithDeb','LAZN4rq-5mI',null],
+ [15,'4.7','Telnet Protocol and Network Virtual Terminal','CodeWithDeb','LAZN4rq-5mI','5:21'],
  [16,'4.7','FTP, SFTP and TFTP','Engineering Funda','CrObzHJtANw','11:13']
 ];
 const m4Rows:Lecture[] = m4Dataset.map(([n,sy,title,educator,id,time,startSeconds=null,endSeconds=null])=>({

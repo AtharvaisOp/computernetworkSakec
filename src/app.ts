@@ -103,17 +103,15 @@ function renderPreparationOrder(subject:StudySubject|undefined){
 }
 const pageLabel=(p:string)=>p==='Lecture roadmap'?'Lectures':p==='Exam planner'?'Schedule':p;
 $('nav').innerHTML=Object.keys(pages).map(p=>'<button data-page="'+p+'" title="'+pageLabel(p)+'" aria-label="'+pageLabel(p)+'">'+icon(pages[p as Page])+'<span class="railLabel">'+pageLabel(p)+'</span></button>').join('');
-const mobileMenu=$('pageMenu'),sidebarBackdrop=$('sidebarBackdrop');
+const sidebarToggle=$('pageMenu');
 function togglePageMenu(open:boolean){
  const label=open?'Collapse sidebar':'Expand sidebar';
- mobileMenu.setAttribute('aria-expanded',String(open));mobileMenu.setAttribute('aria-label',label);mobileMenu.title=label;
- mustQuery('aside').classList.toggle('openMenu',open);sidebarBackdrop.hidden=!open;
- mustQuery('main').inert=open;
+ sidebarToggle.setAttribute('aria-expanded',String(open));sidebarToggle.setAttribute('aria-label',label);sidebarToggle.title=label;
+ document.body.classList.toggle('sidebarExpanded',open);
 }
-mobileMenu.onclick=()=>togglePageMenu(mobileMenu.getAttribute('aria-expanded')!=='true');
-sidebarBackdrop.onclick=()=>{togglePageMenu(false);mobileMenu.focus()};
+sidebarToggle.onclick=()=>togglePageMenu(sidebarToggle.getAttribute('aria-expanded')!=='true');
 document.addEventListener('keydown',event=>{
- if(event.key==='Escape'&&mobileMenu.getAttribute('aria-expanded')==='true'&&!$('dialog').open){togglePageMenu(false);mobileMenu.focus()}
+ if(event.key==='Escape'&&sidebarToggle.getAttribute('aria-expanded')==='true'&&!$('dialog').open){togglePageMenu(false);sidebarToggle.focus()}
 });
 let timerGhost:HTMLElement|null=null,timerReveal:Animation|null=null;
 type TimerMorph = {box:DOMRect;ghost:HTMLElement;target:HTMLElement};
@@ -150,11 +148,14 @@ function morphTimer(from:TimerMorph){
 function openPage(nextPage:Page,moveFocus=false){
  const from=timerMorphOrigin(nextPage);
  if(nextPage==='Lecture roadmap')resetRoadmap();
- page=nextPage;togglePageMenu(false);
+ page=nextPage;
  const hash=page==='Flashcards'?'#flashcards'+(playingQuiz?'/'+quizModule:''):page==='Exam planner'?'':page==='Lecture roadmap'&&activeSubject!=='cn'?'#lectures/'+activeSubject:'#computer-networks'+(activeModule==='m4'?'/m4':'');
  history.replaceState(null,'',location.pathname+location.search+hash);
  render();window.scrollTo(0,0);if(from)morphTimer(from);else animateStudyView();
- if(moveFocus&&mobileMenu.offsetWidth)mobileMenu.focus({preventScroll:true});
+ if(moveFocus){
+  const heading=document.querySelector<HTMLElement>(page==='Exam planner'?'#examHeading':page==='Lecture roadmap'?'#studyWorkspace:not(.emptySubject) #moduleTitle, .emptySubject #panel h2':'#panel h1, #panel h2');
+  if(heading){heading.tabIndex=-1;heading.focus({preventScroll:true});}
+ }
 }
 $('nav').onclick=e=>{const b=eventElement(e)?.closest<HTMLButtonElement>('button');if(b){
  if(b.dataset.page==='Flashcards'){quizModule=activeModule;playingQuiz=false;}
@@ -189,7 +190,7 @@ function syncStudyTimer(){
  $('studyTimer').hidden=page==='Exam planner'||!!activeTest;
  studyTimer.update();
 }
-function render(){$('currentPage').textContent=page==='Exam planner'?'Schedule':page;document.documentElement.classList.toggle('dark',state.theme==='dark');const themeLabel=state.theme==='light'?'Switch to dark mode':'Switch to light mode';$('theme').setAttribute('aria-label',themeLabel);$('theme').title=themeLabel;document.querySelectorAll<HTMLButtonElement>('[data-page]').forEach(b=>{b.classList.toggle('active',b.dataset.page===page);b.setAttribute('aria-current',b.dataset.page===page?'page':'false')});
+function render(){document.documentElement.classList.toggle('dark',state.theme==='dark');const themeLabel=state.theme==='light'?'Switch to dark mode':'Switch to light mode';$('theme').setAttribute('aria-label',themeLabel);$('theme').title=themeLabel;document.querySelectorAll<HTMLButtonElement>('[data-page]').forEach(b=>{b.classList.toggle('active',b.dataset.page===page);b.setAttribute('aria-current',b.dataset.page===page?'page':'false')});
  const planner=page==='Exam planner';
  renderPreparationOrder(studySubjects.find(s=>s.key===activeSubject));
  $('examPlanner').hidden=!planner;$('studyWorkspace').hidden=planner;
@@ -220,7 +221,7 @@ function render(){$('currentPage').textContent=page==='Exam planner'?'Schedule':
   const initial=initialLectureSection(study,state);
   collapsed=new Set(study.sections.filter(s=>s.name!==initial).map(s=>s.name));
  }
- const {remaining,done,unknown,covered,minutes}=viewingSummary(study,state);
+ const {remaining,done,covered,minutes}=viewingSummary(study,state);
  const next=nextLecture(lectures,state,state[`${study.id}/lastActive`]);
  $('nextTitle').textContent=next?next.title:'Roadmap completed';
  $('nextMeta').textContent=next?'Lecture '+String(next.n).padStart(2,'0')+' · '+next.educator+' · '+lectureDuration(next):'All '+lectures.length+' lectures watched';
@@ -228,7 +229,7 @@ function render(){$('currentPage').textContent=page==='Exam planner'?'Schedule':
  updateThumbnail(next);
  $('resume').dataset.watch=$('previewLink').dataset.watch=next?.uid||'';
  $('overviewSummary').textContent=covered+' / '+study.topics.length+' syllabus topics complete · '+study.practice.filter(p=>state[pk(p,study.id)]==='Mastered').length+' / '+study.practice.length+' '+study.masteryLabel+' mastered';
- $('stats').innerHTML='<div class="stat progressStat"><div class="statHead">'+icon('chart')+'Overall progress</div>'+progressRing(study.id,done,lectures.length)+'</div><div class="stat"><div class="statHead">'+icon('check')+'Lectures completed</div><strong>'+done+' <span class="count">/ '+lectures.length+'</span></strong><small>'+remaining.length+' remaining</small></div><div class="stat"><div class="statHead">'+icon('clock')+'Viewing time <select aria-label="Playback speed" id="speed">'+options(speeds,state[moduleSpeed],'×')+'</select></div><strong>'+Math.floor(minutes/60)+'h '+minutes%60+'m</strong><small>'+(unknown?unknown+' unknown durations excluded':'Remaining at selected speed')+'</small></div>';
+ $('stats').innerHTML='<div class="stat progressStat"><div class="statHead">'+icon('chart')+'Overall progress</div>'+progressRing(study.id,done,lectures.length)+'</div><div class="stat"><div class="statHead">'+icon('check')+'Lectures completed</div><strong>'+done+' <span class="count">/ '+lectures.length+'</span></strong><small>'+remaining.length+' remaining</small></div><div class="stat"><div class="statHead">'+icon('clock')+'Viewing time <select aria-label="Playback speed" id="speed">'+options(speeds,state[moduleSpeed],'×')+'</select></div><strong>'+Math.floor(minutes/60)+'h '+minutes%60+'m</strong><small>Remaining at selected speed</small></div>';
  animateProgressRing();
  $('speed').onchange=e=>{changed(patchValue(moduleSpeed,Number(inputValue(e))));render()};renderPanel()}
 function updateThumbnail(lecture:Lecture|undefined) {

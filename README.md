@@ -45,7 +45,7 @@ Open **Lectures → Computer Networks → 04 · Transport Layer**. The subject p
 | m4-l12 | 4.6 | HTTP and HTTPS | r4VY6K3jo5s | 13:52 |
 | m4-l13 | 4.6 | Persistent vs Non-Persistent HTTP | zRUdSu3JlK8 | 07:51 |
 | m4-l14 | 4.6 | SMTP vs POP3 vs IMAP | cjPVlxmf_Vk | 10:03 |
-| m4-l15 | 4.7 | Telnet Protocol and Network Virtual Terminal | LAZN4rq-5mI | Unverified, excluded from viewing estimate |
+| m4-l15 | 4.7 | Telnet Protocol and Network Virtual Terminal | LAZN4rq-5mI | 05:21 |
 | m4-l16 | 4.7 | FTP, SFTP and TFTP | CrObzHJtANw | 11:13 |
 
 The two chapters of Sundeep Saradhi Kanthety's full course use the same video ID but separate progress keys. The embedded player uses start/end parameters and valid saved positions. External YouTube URLs include the start or resume timestamp but cannot enforce the end. Opening a video never marks it complete. The embedded player restores position and selects the preferred speed only when YouTube supports those controls.

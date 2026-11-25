@@ -201,7 +201,7 @@ const sections:LectureSection[]=[
     "sy": "3.5",
     "educator": "Engineering Funda",
     "id": "R0Gq9UbaLTU",
-    "time": "",
+    "time": "22:16",
     "videoTitle": "Supernetting in Computer Networks",
     "uid": "m3-l15",
     "topicIds": [
@@ -347,7 +347,7 @@ const sections:LectureSection[]=[
     "sy": "3.11",
     "educator": "Engineering Funda",
     "id": "qdYgDafId3U",
-    "time": "",
+    "time": "9:40",
     "videoTitle": "RARP - Reverse Address Resolution Protocol in Computer Networks",
     "uid": "m3-l25",
     "topicIds": [
@@ -360,7 +360,7 @@ const sections:LectureSection[]=[
     "sy": "3.11",
     "educator": "Engineering Funda",
     "id": "-FaGF6s3rJ8",
-    "time": "",
+    "time": "13:39",
     "videoTitle": "ICMP – Internet Control Message Protocol in Computer Networks",
     "uid": "m3-l26",
     "topicIds": [
@@ -373,7 +373,7 @@ const sections:LectureSection[]=[
     "sy": "3.11",
     "educator": "UPV University",
     "id": "_g194MRk5wE",
-    "time": "",
+    "time": "9:16",
     "videoTitle": "The IGMP protocol | | UPV",
     "uid": "m3-l27",
     "topicIds": [
