@@ -60,3 +60,9 @@ Schedule opens on the next exam. Choose another subject to see its exact IST dea
 ### Optional exam reminders
 
 In Schedule, open **Exam reminders**. Select an upcoming exam and a lead time, then copy the prompt into a ChatGPT chat that supports scheduled tasks and confirm the scheduled time. All times are in India Standard Time. The site does not create tasks, store reminder choices, or send notifications, and it does not offer reminder times that have already passed.
+
+### Your progress and backups
+
+Guest progress stays in the current browser. Signing in with ChatGPT enables account sync and keeps a device-local copy for offline recovery. Signing out does not erase either copy; avoid saving private notes on shared devices, and clear this site's browser data after exporting anything you need. Clearing browser data does not erase progress already synced online.
+
+**Schedule → Progress backup** downloads a JSON snapshot and restores compatible snapshots after confirmation. Restoring replaces the fields in the file. Keep downloaded backups private; they include your study notes and are not encrypted by the app. The timetable and learning resources are public; personal progress is not. YouTube serves thumbnails and the optional embedded player.

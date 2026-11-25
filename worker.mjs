@@ -1,18 +1,54 @@
 // Build injects the assets and the same validation used by the dashboard.
+const progressByteLimit=1500000;
+const pagePolicy=[
+ "default-src 'none'",
+ "script-src 'self' https://www.youtube.com",
+ "style-src 'self' 'unsafe-inline'",
+ "img-src 'self' https://i.ytimg.com",
+ "connect-src 'self'",
+ "frame-src https://www.youtube.com",
+ "object-src 'none'",
+ "base-uri 'none'",
+ "form-action 'none'"
+].join('; ');
+const safeHeaders={'x-content-type-options':'nosniff','referrer-policy':'strict-origin-when-cross-origin'};
+async function readProgressJSON(request){
+ const reader=request.body?.getReader();
+ if(!reader)return {status:400};
+ const decoder=new TextDecoder('utf-8',{fatal:true});
+ let bytes=0,text='';
+ try{
+  while(true){
+   const {value,done}=await reader.read();
+   if(done)break;
+   bytes+=value.byteLength;
+   if(bytes>progressByteLimit){
+    await reader.cancel().catch(()=>{});
+    return {status:413};
+   }
+   text+=decoder.decode(value,{stream:true});
+  }
+  return {data:JSON.parse(text+decoder.decode())};
+ }catch{
+  await reader.cancel().catch(()=>{});
+  return {status:400};
+ }finally{reader.releaseLock()}
+}
 export default {async fetch(request,env){
  const url=new URL(request.url);
  const user=request.headers.get('oai-authenticated-user-id')||'';
  if(url.pathname!=='/progress'){
+  if(!['GET','HEAD'].includes(request.method))return new Response(null,{status:405,headers:{...safeHeaders,allow:'GET, HEAD'}});
   const path=url.pathname==='/'?'/index.html':(assetAliases[url.pathname]??url.pathname);
-  if(!Object.hasOwn(assets,path))return new Response('Page not found',{status:404});
+  if(!Object.hasOwn(assets,path))return new Response('Page not found',{status:404,headers:safeHeaders});
   const type=path.endsWith('.js')?'text/javascript':path.endsWith('.css')?'text/css':'text/html';
   if(path==='/index.html'){
    const html=assets[path].replace('name="notebook-account" content=""','name="notebook-account" content="'+encodeURIComponent(user)+'"');
-   return new Response(html,{headers:{'content-type':'text/html; charset=utf-8','cache-control':'private, no-store'}});
+   return new Response(request.method==='HEAD'?null:html,{headers:{...safeHeaders,'content-type':'text/html; charset=utf-8','cache-control':'private, no-store','content-security-policy':pagePolicy}});
   }
-  return new Response(assets[path],{headers:{'content-type':type+'; charset=utf-8','cache-control':'no-cache','x-content-type-options':'nosniff'}})
+  return new Response(request.method==='HEAD'?null:assets[path],{headers:{...safeHeaders,'content-type':type+'; charset=utf-8','cache-control':'no-cache'}})
  }
- const reply=(value,status=200)=>Response.json(value,{status,headers:{'cache-control':'no-store'}});
+ const reply=(value,status=200)=>Response.json(value,{status,headers:{...safeHeaders,'cache-control':'private, no-store'}});
 
  if(!user)return reply({error:'Sign-in required'},401);
  if(request.headers.get('X-Notebook-Account')!==encodeURIComponent(user))return reply({error:'Account changed'},409);
@@ -22,9 +58,13 @@ export default {async fetch(request,env){
   if(request.method==='GET'){const obj=await env.BUCKET.get(objectKey);return reply(migrate(obj?await obj.json():{}))}
   if(request.method!=='PATCH')return reply({},405);
   if(request.headers.get('origin')!==url.origin)return reply({},403);
-  const body=await request.text();if(body.length>1500000)return reply({},413);
-  let delta;try{delta=migrate(JSON.parse(body))}catch{return reply({},400)}
-  if(!valid(delta))return reply({},400);
+  if(request.headers.get('content-type')?.split(';',1)[0].trim().toLowerCase()!=='application/json')return reply({},415);
+  const suppliedLength=request.headers.get('content-length');
+  if(suppliedLength&&Number(suppliedLength)>progressByteLimit)return reply({},413);
+  const body=await readProgressJSON(request);
+  if(body.status)return reply({},body.status);
+  const delta=migrate(body.data);
+  if(!valid(delta,true))return reply({},400);
   for(let i=0;i<5;i++){
    const obj=await env.BUCKET.get(objectKey);
    const prior=migrate(obj?await obj.json():{});

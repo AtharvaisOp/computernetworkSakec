@@ -56,11 +56,11 @@ test('authenticated progress API merges Module 4 changes without overwriting Mod
  const {default:worker}=await import('data:text/javascript;base64,'+code);
  const rows=new Map([['progress/v1/alice',{'m3/m3-l01/done':true,speed:1.25}],['progress/v1/bob',{'m4/m4-l02/done':true}]]);
  const env={BUCKET:{async get(key){return rows.has(key)?{etag:'same',json:async()=>rows.get(key)}:null},async put(key,body){rows.set(key,JSON.parse(body));return {etag:'new'}}}};
- const headers={'oai-authenticated-user-id':'alice','X-Notebook-Account':'alice',origin:'https://planner.test'};
- const patch=await worker.fetch(new Request('https://planner.test/progress',{method:'PATCH',headers,body:JSON.stringify({'m4/m4-l11/done':true,'m4/practice/tcp-timers':'Mastered','m4/speed':2})}),env);
+ const headers={'oai-authenticated-user-id':'alice','X-Notebook-Account':'alice',origin:'https://planner.test','Content-Type':'application/json; charset=utf-8'};
+ const patch=await worker.fetch(new Request('https://planner.test/progress',{method:'PATCH',headers,body:JSON.stringify({'m4/m4-l11/done':true,'m4/practice/tcp-timers':'Mastered','m4/speed':2,'m4/m4-l11/note':'Résumé · अभ्यास 📘'})}),env);
  assert.equal(patch.status,200);
  const get=await worker.fetch(new Request('https://planner.test/progress',{headers}),env);
- assert.deepEqual(await get.json(),{'m3/m3-l01/done':true,speed:1.25,'m4/m4-l11/done':true,'m4/practice/tcp-timers':'Mastered','m4/speed':2});
+ assert.deepEqual(await get.json(),{'m3/m3-l01/done':true,speed:1.25,'m4/m4-l11/done':true,'m4/practice/tcp-timers':'Mastered','m4/speed':2,'m4/m4-l11/note':'Résumé · अभ्यास 📘'});
  assert.deepEqual(rows.get('progress/v1/bob'),{'m4/m4-l02/done':true});
 });
 test('roadmap opens only the section that holds the resume lecture',()=>{

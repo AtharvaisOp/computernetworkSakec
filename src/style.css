@@ -234,3 +234,4 @@ aside footer .accountLink.signOut{padding-inline:12px}
 .examReminders select,.examReminders textarea{display:block;width:100%;font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px;margin:5px 0 0}
 .examReminders textarea{resize:vertical;margin-bottom:8px}
 @media(max-width:460px){.reminderOptions{grid-template-columns:1fr}}
+.progressBackup{margin-inline-start:10px;margin-block-start:10px}

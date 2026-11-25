@@ -96,3 +96,25 @@ test('migrating a mixed-version backup retains newer progress and unrelated quiz
       && JSON.stringify(migrate(data)) === JSON.stringify(data);
   })()`));
 });
+
+test('serves the ordinary public page with its scoped browser policy and backup entry', async () => {
+ const source=readFileSync(path.join(root,'dist/server/index.js'));
+ const {default:worker}=await import('data:text/javascript;base64,'+source.toString('base64'));
+ const response=await worker.fetch(new Request('https://notebook.test/'),{});
+ assert.equal(response.headers.get('x-content-type-options'),'nosniff');
+ assert.equal(response.headers.get('referrer-policy'),'strict-origin-when-cross-origin');
+ assert.match(response.headers.get('cache-control'),/private, no-store/);
+ const policy=response.headers.get('content-security-policy');
+ assert.match(policy,/default-src 'none'/);
+ assert.match(policy,/script-src 'self' https:\/\/www\.youtube\.com/);
+ assert.match(policy,/object-src 'none'/);
+ assert.match(await response.text(),/id="progressBackup"/);
+});
+
+test('new quiz writes use the supported shape and ordinary older reads stay compatible',()=>{
+ assert.ok(read(`(() => {
+  const validRound={index:0,answers:[],cards:[{id:'m3-01',order:'012'}]};
+  const olderRound={...validRound,legacyLabel:'previous round'};
+  return valid({'quiz/m3/round':validRound},true)&&valid({'quiz/m3/round':olderRound})&&!valid({'quiz/m3/round':olderRound},true);
+ })()`));
+});

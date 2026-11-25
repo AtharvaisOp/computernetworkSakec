@@ -18,9 +18,9 @@ for(const mod of Object.values(studyModules)){
  }
  for(const p of mod.practice)defaults[pk(p,mod.id)]=mod.stages[0];
 }
-function valid(data){return data && typeof data==='object' && !Array.isArray(data) && Object.entries(data).every(([k,v])=>{
+function valid(data,strict=false){return data && typeof data==='object' && !Array.isArray(data) && Object.entries(data).every(([k,v])=>{
  if(!Object.hasOwn(defaults,k))return false;
- if(k.startsWith('quiz/'))return validQuizValue(k,v);
+ if(k.startsWith('quiz/'))return validQuizValue(k,v,strict);
  if(k==='theme')return ['dark','light'].includes(v);
  if(k==='speed'||k.endsWith('/speed'))return speeds.includes(v);
  const mod=studyModules[k.split('/')[0]];

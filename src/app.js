@@ -15,7 +15,7 @@ accountLink.title=account?'Signed in with ChatGPT':'Save progress across devices
 let state={...defaults},pending={},localOK=true,sync='Checking account storage…',busy=false;
 try{let raw=JSON.parse(localStorage.getItem(storageKey));if(raw){raw.data=migrate(raw.data);raw.pending=migrate(raw.pending)}if(raw&&valid(raw.data)&&valid(raw.pending)){Object.assign(state,raw.data);pending=raw.pending}}catch{localOK=false}
 function persist(){try{localStorage.setItem(storageKey,JSON.stringify({data:state,pending}));localOK=true}catch{localOK=false}}
-function changed(delta){Object.assign(state,delta);Object.assign(pending,delta);persist();flush()}
+function changed(delta){Object.assign(state,delta);Object.assign(pending,delta);persist();return flush()}
 async function flush(){
  if(!account){
   sync=localOK?'Saved in this browser · sign in to sync':'Storage unavailable · export a backup before leaving';
@@ -248,10 +248,33 @@ function modal(html){$('dialogBody').innerHTML=html;$('dialog').showModal()}
 function note(l){modal('<h2>Lecture notes</h2><label>'+esc(l.title)+'<textarea id="memo" maxlength="8000" placeholder="Write your notes…"></textarea></label><small>Changes save as you type.</small>');$('memo').value=get(l,'note');$('memo').oninput=e=>changed({[key(l,'note')]:e.target.value})}
 $('close').onclick=()=>$('dialog').close();$('dialog').onclose=render;
 $('theme').onclick=()=>{changed({theme:state.theme==='light'?'dark':'light'});render()};
-function openBackupSettings(){modal('<h2>Backup &amp; settings</h2><p id="sync" role="status"></p><p>Export a JSON copy of your lectures, notes, practice and preferences.</p><button id="export">Export backup</button><button id="import">Import backup</button><input id="backup" type="file" accept=".json,application/json" hidden><p id="notice" role="status"></p><button id="reset">Reset Module 3 progress</button>');$('sync').textContent=sync;
- $('export').onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify({version:1,data:state},null,2)],{type:'application/json'}));a.download='network-notebook-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),2000)};
- $('import').onclick=()=>$('backup').click();$('backup').onchange=async e=>{try{const f=e.target.files[0];if(!f)return;if(f.size>1500000)throw Error();const b=JSON.parse(await f.text());b.data=migrate(b.data);if(b.version!==1||!valid(b.data)||!Object.keys(b.data).length)throw Error();if(confirm('Restore the saved fields from this backup?')){changed(b.data);$('notice').textContent='Backup restored.'}}catch{$('notice').textContent='Invalid backup. Your progress is unchanged.'}e.target.value=''};
- $('reset').onclick=()=>{if(confirm('Clear all Module 3 completion, revision marks, notes and numerical practice?')){changed(Object.fromEntries(Object.entries(defaults).filter(([k])=>k.startsWith('m3/'))));$('notice').textContent='Module 3 progress cleared.'}}};
+function openProgressBackup(){
+ modal('<h2>Progress backup</h2><p>Download a JSON copy of your notes, progress and settings. Anyone with the file can read its contents. Keep it somewhere private.</p><button id="export" type="button">Download backup</button> <button id="import" type="button">Restore from file</button><input id="backup" type="file" accept=".json,application/json" hidden><p id="notice" role="status"></p>');
+ const notice=$('notice'),restore=$('import');
+ $('export').onclick=()=>{
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob([JSON.stringify({version:1,data:state},null,2)],{type:'application/json'}));
+  a.download='network-notebook-backup.json';a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),2000);
+ };
+ restore.onclick=()=>$('backup').click();
+ $('backup').onchange=async e=>{
+  const input=e.target,file=input.files[0];if(!file)return;
+  restore.disabled=true;
+  try{
+   if(file.size>1500000)throw Error();
+   const backup=JSON.parse(await file.text()), data=migrate(backup?.data);
+   if(backup?.version!==1||!valid(data,true)||!Object.keys(data).length)throw Error();
+   if(!confirm('Restore this backup? It replaces the progress, notes and settings contained in the file. Download a current backup first if you want to keep them.'))return;
+   await changed(data);
+   notice.textContent=account&&Object.keys(pending).length
+    ?(localOK?'Backup applied in this browser. Changes have not yet synced to your account.':'Backup applied for this session. Changes are not saved yet.')
+    :account?'Backup restored to your account.':localOK?'Backup restored in this browser.':'Backup applied for this session. Browser storage is unavailable.';
+  }catch{notice.textContent='Invalid backup. Your progress is unchanged.'}
+  finally{input.value='';restore.disabled=false}
+ };
+}
+$('progressBackup').onclick=openProgressBackup;
 
 let feedbackTimer;
 function feedback(message) {
