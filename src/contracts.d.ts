@@ -7,7 +7,7 @@ type LectureField = 'done' | 'revision' | 'note' | 'position';
 type LectureId = `${ModuleId}-l${string}`;
 interface Lecture {
   n:number; title:string; sy:string; educator:string; id:string; uid:LectureId; topicIds:string[]; conceptIds?:string[];
-  durationSeconds?:number|null; verificationStatus?:'verified'|'playback-unverified';verificationDate?:string;
+  workedExample?:boolean; durationSeconds?:number|null; verificationStatus?:'verified'|'playback-unverified';verificationDate?:string;
   time:string|null; videoTitle:string; legacyVideo?:string; startSeconds?:number|null; endSeconds?:number|null;
 }
 interface LectureSection {name:string;rows:Lecture[]}

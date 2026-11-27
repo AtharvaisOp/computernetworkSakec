@@ -436,40 +436,6 @@ const compilerRows = [
         }
     },
     {
-        "id": "cd-m4-l03",
-        "subjectId": "cd",
-        "moduleId": "cd-m4",
-        "syllabusRef": "4.1",
-        "title": "Peephole optimization",
-        "educator": "Gate Smashers",
-        "videoId": "clb4tnEm8l4",
-        "watchUrl": "https://www.youtube.com/watch?v=clb4tnEm8l4",
-        "durationSeconds": 619,
-        "conceptIds": [
-            "cd-optimization-methods"
-        ],
-        "coverage": [
-            "Peephole optimization",
-            "Dead-code elimination",
-            "Strength reduction"
-        ],
-        "verificationStatus": "player-duration-observed-playback-unverified",
-        "verificationDate": "2026-11-27",
-        "playback": {
-            "watch": "unverified",
-            "embed": "unverified"
-        },
-        "evidence": {
-            "video": "https://www.youtube.com/watch?v=clb4tnEm8l4",
-            "duration": "https://playlistduration.com/playlist/PLxCzCOWd7aiEKtKSIHYusizkESC42diyc",
-            "durationStatus": "playlist-indexed-not-player-measured",
-            "coverageStatus": "title-description-mapped-not-watch-verified",
-            "idStatus": "matched-official-youtube-upload-metadata",
-            "playerDurationSeconds": 619,
-            "browserAudit": "Signed-out watch page and in-app embed opened. Playback timestamp did not advance in the test browser."
-        }
-    },
-    {
         "id": "cd-m4-l04",
         "subjectId": "cd",
         "moduleId": "cd-m4",
@@ -670,5 +636,93 @@ const compilerRows = [
             "playerDurationSeconds": 1084,
             "browserAudit": "Signed-out watch page and in-app embed opened. Playback timestamp did not advance in the test browser."
         }
+    },
+    {
+        "id": "cd-m2-l12",
+        "workedExample": true,
+        "subjectId": "cd",
+        "moduleId": "cd-m2",
+        "syllabusRef": "2.1",
+        "title": "Operator precedence: worked example 2",
+        "educator": "Sudhakar Atchala",
+        "videoId": "qfV5MmqC1B8",
+        "watchUrl": "https://www.youtube.com/watch?v=qfV5MmqC1B8",
+        "durationSeconds": 1120,
+        "conceptIds": [
+            "cd-precedence-table"
+        ],
+        "coverage": [
+            "Worked operator-precedence parsing example"
+        ],
+        "verificationStatus": "source-indexed-playback-unverified",
+        "verificationDate": "2026-11-27",
+        "playback": {
+            "watch": "unverified",
+            "embed": "unverified"
+        },
+        "evidence": {
+            "sourcePlaylist": "https://www.youtube.com/playlist?list=PLXj4XH7LcRfC9pGMWuM6UWE3V4YZ9TZzM",
+            "playlistPosition": 38,
+            "durationIndex": "https://www.syncstudy.in/course/PLXj4XH7LcRfC9pGMWuM6UWE3V4YZ9TZzM"
+        }
+    },
+    {
+        "id": "cd-m2-l13",
+        "workedExample": true,
+        "subjectId": "cd",
+        "moduleId": "cd-m2",
+        "syllabusRef": "2.2",
+        "title": "LALR vs CLR parsing tables: worked example",
+        "educator": "Gate Smashers",
+        "videoId": "pMeq6OIB2eI",
+        "watchUrl": "https://www.youtube.com/watch?v=pMeq6OIB2eI",
+        "durationSeconds": 1033,
+        "conceptIds": [
+            "cd-lalr",
+            "cd-clr"
+        ],
+        "coverage": [
+            "Worked comparison of LALR and CLR parsing tables"
+        ],
+        "verificationStatus": "source-indexed-playback-unverified",
+        "verificationDate": "2026-11-27",
+        "playback": {
+            "watch": "unverified",
+            "embed": "unverified"
+        },
+        "evidence": {
+            "sourcePlaylist": "https://www.youtube.com/playlist?list=PLxCzCOWd7aiEKtKSIHYusizkESC42diyc",
+            "creatorLectureNumber": 15,
+            "durationIndex": "https://playlistduration.com/playlist/PLxCzCOWd7aiEKtKSIHYusizkESC42diyc"
+        }
+    },
+    {
+        "id": "cd-m4-l10",
+        "workedExample": true,
+        "subjectId": "cd",
+        "moduleId": "cd-m4",
+        "syllabusRef": "4.4",
+        "title": "Simple code generation: worked example",
+        "educator": "Kalrav",
+        "videoId": "dbNIHGp3BI0",
+        "watchUrl": "https://www.youtube.com/watch?v=dbNIHGp3BI0&t=290s",
+        "durationSeconds": null,
+        "conceptIds": [
+            "cd-codegen-algorithm"
+        ],
+        "coverage": [
+            "Converting three-address code to target instructions"
+        ],
+        "verificationStatus": "source-indexed-playback-unverified",
+        "verificationDate": "2026-11-27",
+        "playback": {
+            "watch": "unverified",
+            "embed": "unverified"
+        },
+        "evidence": {
+            "creatorChapter": "Solved Example",
+            "creatorChapterStartSeconds": 290
+        },
+        "startSeconds": 290
     }
 ];

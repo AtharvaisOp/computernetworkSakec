@@ -19,6 +19,11 @@ for(const mod of Object.values(studyModules)){
  }
  for(const p of mod.practice)defaults[pk(p,mod.id)]=mod.stages[0];
 }
+// A removed lecture may still exist in earlier browser/account records and backup files.
+defaults[`cd-m4/${retiredCompilerLecture}/done`]=false;
+defaults[`cd-m4/${retiredCompilerLecture}/revision`]=false;
+defaults[`cd-m4/${retiredCompilerLecture}/note`]='';
+defaults[`cd-m4/${retiredCompilerLecture}/position`]=0;
 function valid(data:unknown,strict=false):data is ProgressPatch{return data!==null && typeof data==='object' && !Array.isArray(data) && Object.entries(data).every(([k,v])=>{
  if(!Object.hasOwn(defaults,k))return false;
  if(k==='lastSubject')return typeof v==='string'&&['cn','cd','bi','mad','ml','nlp'].includes(v);
@@ -28,7 +33,7 @@ function valid(data:unknown,strict=false):data is ProgressPatch{return data!==nu
  if(k==='theme')return ['dark','light'].includes(v);
  if(k==='speed'||k.endsWith('/speed'))return typeof v==='number'&&speeds.includes(v);
  const mod=studyModules[k.split('/')[0] as ModuleId];
- if(k.endsWith('/lastActive'))return v===''||mod.lectures.some(l=>l.uid===v);
+ if(k.endsWith('/lastActive'))return v===''||(mod.id==='cd-m4'&&v===retiredCompilerLecture)||mod.lectures.some(l=>l.uid===v);
  if(k.endsWith('/position'))return typeof v==='number'&&Number.isFinite(v)&&v>=0&&v<86400;
  if(k.includes('/practice/'))return typeof v==='string'&&mod.stages.includes(v);
  if(k.endsWith('/note'))return typeof v==='string'&&v.length<=8000;
@@ -44,6 +49,7 @@ function migrate(data:unknown):unknown{
   if(!Object.hasOwn(result,current))result[current]=result[old];
   delete result[old];
  }
+ migrateRetiredRecall(result);
  return result;
 }
 function nextLecture(items:Lecture[],record:ProgressPatch,last:LectureId|''|undefined){
@@ -61,11 +67,12 @@ function viewingSummary(mod:StudyModule,record:ProgressPatch) {
   const parts=String(l.time||'0').split(':').map(Number);
   return sum+parts.reduce((acc,p)=>acc*60+p,0);
  },0);
+ const core=mod.lectures.filter(l=>!l.workedExample);
  const covered=mod.topics.filter((_,i)=>{
-  const id=mod.number+'.'+(i+1), matches=mod.lectures.filter(l=>l.topicIds.includes(id));
+  const id=mod.number+'.'+(i+1), matches=core.filter(l=>l.topicIds.includes(id));
   return matches.length&&matches.every(l=>record[key(l,'done')]);
  }).length;
- return {remaining,unknown,covered,seconds,minutes:Math.ceil(seconds/60/(record[speedKey(mod.id)]||1)),done:mod.lectures.length-remaining.length};
+ return {remaining,unknown,covered,seconds,coreTotal:core.length,coreDone:core.filter(l=>record[key(l,'done')]).length,minutes:Math.ceil(seconds/60/(record[speedKey(mod.id)]||1)),done:mod.lectures.length-remaining.length};
 }
 function playbackStart(l:Lecture,position:number){
  const start=l.startSeconds??0,end=l.endSeconds??Infinity;

@@ -117,8 +117,8 @@ window.addEventListener('focus', () => { if (!$('dialog').open)
 const roadmapHash = () => location.hash.startsWith('#computer-networks') || location.hash.startsWith('#lectures/');
 let page = location.hash.startsWith('#flashcards') ? 'Flashcards' : roadmapHash() ? 'Lecture roadmap' : 'Exam planner';
 const studySubjects = [
-    { key: 'cn', label: 'Computer Networks', modules: ['m3', 'm4'], preparationOrder: [[3, 'Network Layer'], [4, 'Transport Layer'], [2, 'Data Link Layer'], [1, 'Intro to Networking']] },
-    { key: 'cd', label: 'Compiler Design', modules: ['cd-m2', 'cd-m4', 'cd-m1', 'cd-m3'], preparationOrder: [[2, 'Bottom Up Parsing'], [4, 'Code Generation'], [1, 'Compiler Basics and Top Down Parsing'], [3, 'Intermediate Code Generation']] },
+    { key: 'cn', label: 'Computer Networks', compact: 'CN', modules: ['m3', 'm4'], preparationOrder: [[3, 'Network Layer'], [4, 'Transport Layer'], [2, 'Data Link Layer'], [1, 'Intro to Networking']] },
+    { key: 'cd', label: 'Compiler Design', compact: 'CD', modules: ['cd-m2', 'cd-m4', 'cd-m1', 'cd-m3'], preparationOrder: [[2, 'Bottom Up Parsing'], [4, 'Code Generation'], [1, 'Compiler Basics and Top Down Parsing'], [3, 'Intermediate Code Generation']] },
     ...examSchedule.filter(e => !['C.N.', 'C.D.'].includes(e.code)).map(e => ({ key: e.code.toLowerCase().replace(/[^a-z]/g, ''), label: e.label, modules: [] }))
 ];
 const subjectFor = (id) => studySubjects.find(s => s.key === id);
@@ -154,7 +154,11 @@ function jumpToRequirement(req) {
             render();
         }
     }
-    const el = [...document.querySelectorAll('[data-concept], [data-done]')].find(n => n.dataset.concept === req.ref || n.dataset.done === req.ref);
+    if (!lecture && studyModules[req.module].revisionOnly) {
+        openRevisionReading(req.ref);
+        return;
+    }
+    const el = [...document.querySelectorAll('[data-done]')].find(n => n.dataset.done === req.ref);
     el?.scrollIntoView({ block: 'center' });
     el?.focus({ preventScroll: true });
 }
@@ -230,6 +234,11 @@ function togglePageMenu(open) {
     document.body.classList.toggle('sidebarExpanded', open);
 }
 sidebarToggle.onclick = () => togglePageMenu(sidebarToggle.getAttribute('aria-expanded') !== 'true');
+$('plannerSidebar').addEventListener('click', event => {
+    // Do not override the dedicated toggle or cancel a control's own click.
+    if (!event.composedPath().includes(sidebarToggle) && sidebarToggle.getAttribute('aria-expanded') !== 'true')
+        togglePageMenu(true);
+});
 document.addEventListener('keydown', event => {
     if (event.key === 'Escape' && sidebarToggle.getAttribute('aria-expanded') === 'true' && !$('dialog').open) {
         togglePageMenu(false);
@@ -322,7 +331,7 @@ $('nav').onclick = e => {
     }
 };
 const subjectSelect = $('subjectSelect');
-subjectSelect.innerHTML = studySubjects.map(s => '<option value="' + s.key + '">' + esc(s.label) + '</option>').join('');
+subjectSelect.innerHTML = studySubjects.map(s => '<option value="' + s.key + '" aria-label="' + esc(s.label) + '">' + esc(s.compact ?? s.label) + '</option>').join('');
 subjectSelect.onchange = () => { selectStudySubject(subjectSelect.value); recallStudying = false; openPage(page === 'Flashcards' ? 'Flashcards' : 'Lecture roadmap'); subjectSelect.focus({ preventScroll: true }); };
 $('moduleSwitch').onclick = e => {
     const button = eventElement(e)?.closest('button[data-module]');
@@ -371,6 +380,8 @@ function render() {
     $('theme').title = themeLabel;
     document.querySelectorAll('[data-page]').forEach(b => { b.classList.toggle('active', b.dataset.page === page); b.setAttribute('aria-current', b.dataset.page === page ? 'page' : 'false'); });
     const planner = page === 'Exam planner';
+    const masteryButton = mustQuery('[data-page="Numerical practice"]', $('nav'));
+    masteryButton.hidden = activeSubject === 'cd';
     renderPreparationOrder(studySubjects.find(s => s.key === activeSubject));
     $('examPlanner').hidden = !planner;
     $('studyWorkspace').hidden = planner;
@@ -403,7 +414,7 @@ function render() {
         return;
     }
     $('moduleSwitch').hidden = emptySubject;
-    const switchHTML = '<span>' + esc(subject.label) + '</span>' + subject.modules.map(id => '<button type="button" data-module="' + id + '">' + String(studyModules[id].number).padStart(2, '0') + ' · ' + esc(studyModules[id].name) + '</button>').join('');
+    const switchHTML = '<span title="' + esc(subject.label) + '">' + esc(subject.compact ?? subject.label) + '</span>' + subject.modules.map(id => '<button type="button" data-module="' + id + '">' + String(studyModules[id].number).padStart(2, '0') + ' · ' + esc(studyModules[id].name) + '</button>').join('');
     if ($('moduleSwitch').dataset.subject !== subject.key) {
         $('moduleSwitch').innerHTML = switchHTML;
         $('moduleSwitch').dataset.subject = subject.key;
@@ -416,8 +427,7 @@ function render() {
     document.querySelectorAll('[data-module]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.module === study.id)));
     $('moduleEyebrow').innerHTML = '<span class="tick"></span> MODULE 0' + study.number + ' · ' + study.weight + ' estimated';
     $('moduleTitle').textContent = study.name;
-    $('moduleDescription').textContent = (study.revisionOnly ? 'Checklist, notes and flashcards · ' : lectures.length + ' lectures · ' + study.sections.length + ' sections · ') + study.marks + ' of 60 marks (estimated)';
-    const masteryButton = mustQuery('[data-page="Numerical practice"]', $('nav'));
+    $('moduleDescription').textContent = (study.revisionOnly ? 'Revision notes and flashcards · ' : lectures.length + ' lectures · ' + study.sections.length + ' sections · ') + study.marks + ' of 60 marks (estimated)';
     mustQuery('.railLabel', masteryButton).textContent = study.practiceLabel;
     masteryButton.title = study.practiceLabel;
     masteryButton.setAttribute('aria-label', study.practiceLabel);
@@ -425,14 +435,13 @@ function render() {
         const initial = initialLectureSection(study, state);
         collapsed = new Set(study.sections.filter(s => s.name !== initial).map(s => s.name));
     }
-    const { remaining, done, covered, minutes, unknown } = viewingSummary(study, state);
+    const { remaining, done, covered, minutes, unknown, coreDone, coreTotal } = viewingSummary(study, state);
     const isRevision = Boolean(study.revisionOnly);
     mustQuery('.hero').hidden = isRevision;
+    $('stats').hidden = isRevision;
     if (isRevision) {
-        const topics = revisionConcepts(study), completed = topics.filter(c => state[conceptKey(c.id)]).length;
-        $('stats').innerHTML = '<div class="stat progressStat"><div class="statHead">Revision progress</div>' + progressRing(study.id, completed, topics.length) + '</div><div class="stat"><div class="statHead">Concepts checked</div><strong>' + completed + ' / ' + topics.length + '</strong></div>';
+        $('stats').replaceChildren();
         $('overviewSummary').textContent = 'Mid-semester revision · no full lecture playlist';
-        animateProgressRing();
         renderPanel();
         return;
     }
@@ -444,8 +453,8 @@ function render() {
         $('resume').href = link(next);
     updateThumbnail(next);
     $('resume').dataset.watch = $('previewLink').dataset.watch = next?.uid || '';
-    $('overviewSummary').textContent = covered + ' / ' + study.topics.length + ' syllabus topics complete · ' + (study.subjectId === 'cd' ? revisionConcepts(study).filter(c => state[conceptKey(c.id)]).length : study.practice.filter(p => state[pk(p, study.id)] === 'Mastered').length) + ' / ' + (study.subjectId === 'cd' ? revisionConcepts(study).length : study.practice.length) + ' ' + study.masteryLabel + ' mastered';
-    $('stats').innerHTML = '<div class="stat progressStat"><div class="statHead">' + icon('chart') + 'Overall progress</div>' + progressRing(study.id, done, lectures.length) + '</div><div class="stat"><div class="statHead">' + icon('check') + 'Lectures completed</div><strong>' + done + ' <span class="count">/ ' + lectures.length + '</span></strong><small>' + remaining.length + ' remaining</small></div><div class="stat"><div class="statHead">' + icon('clock') + 'Viewing time <select aria-label="Playback speed" id="speed">' + options(speeds, state[moduleSpeed], '×') + '</select></div><strong>' + Math.floor(minutes / 60) + 'h ' + minutes % 60 + 'm</strong><small>Remaining at selected speed' + (study.subjectId === 'cd' && unknown ? ' · ' + unknown + ' unknown' : '') + '</small></div>';
+    $('overviewSummary').textContent = covered + ' / ' + study.topics.length + ' syllabus topics complete' + (study.subjectId === 'cn' ? ' · ' + study.practice.filter(p => state[pk(p, study.id)] === 'Mastered').length + ' / ' + study.practice.length + ' ' + study.masteryLabel + ' mastered' : '');
+    $('stats').innerHTML = '<div class="stat progressStat"><div class="statHead">' + icon('chart') + (coreTotal === lectures.length ? 'Overall progress' : 'Core lecture progress') + '</div>' + progressRing(study.id, coreDone, coreTotal) + '</div><div class="stat"><div class="statHead">' + icon('check') + 'Lectures completed</div><strong>' + done + ' <span class="count">/ ' + lectures.length + '</span></strong><small>' + remaining.length + ' remaining</small></div><div class="stat"><div class="statHead">' + icon('clock') + 'Viewing time <select aria-label="Playback speed" id="speed">' + options(speeds, state[moduleSpeed], '×') + '</select></div><strong>' + Math.floor(minutes / 60) + 'h ' + minutes % 60 + 'm</strong><small>Remaining at selected speed' + (study.subjectId === 'cd' && unknown ? ' · ' + unknown + ' unknown' : '') + '</small></div>';
     animateProgressRing();
     $('speed').onchange = e => { changed(patchValue(moduleSpeed, Number(inputValue(e)))); render(); };
     renderPanel();
@@ -488,7 +497,7 @@ function groups() {
         if (!rows.length)
             return '';
         let count = s.rows.filter(l => get(l, 'done')).length, open = !collapsed.has(s.name);
-        return '<article class="group"><button class="groupHead" data-section="' + i + '" aria-expanded="' + open + '"><span class="num">' + String(i + 1).padStart(2, '0') + '</span><strong>' + esc(s.name) + '</strong>' + bar(count, s.rows.length) + '<span class="count">' + count + ' / ' + s.rows.length + '</span>' + icon(open ? 'down' : 'right') + '</button>' + (open ? rows.map(l => '<div class="row ' + (get(l, 'done') ? 'done' : '') + '"><input type="checkbox" data-done="' + l.uid + '" aria-label="Completed: ' + esc(l.title) + '" ' + (get(l, 'done') ? 'checked' : '') + '><div class="details"><img class="lectureThumb" loading="lazy" alt="" src="https://i.ytimg.com/vi/' + l.id + '/mqdefault.jpg"><a data-watch="' + l.uid + '" href="' + link(l) + '" target="_blank" rel="noopener" title="' + esc(l.videoTitle) + '">' + esc(l.title) + '</a><small>' + esc(l.sy) + (l.topicIds.some(t => ['3.3', '3.4', '3.5', '3.8', '3.9', '3.10'].includes(t)) ? ' · Numerical practice' : '') + ' · ' + esc(l.educator) + ' · ' + lectureDuration(l) + ' · <a class="watchText" data-watch="' + l.uid + '" href="' + link(l) + '">Watch</a></small></div>' + action(l, 'note', 'Personal notes', !!get(l, 'note')) + action(l, 'revision', 'Mark for revision', get(l, 'revision')) + '</div>').join('') : '') + '</article>';
+        return '<article class="group"><button class="groupHead" data-section="' + i + '" aria-expanded="' + open + '"><span class="num">' + String(i + 1).padStart(2, '0') + '</span><strong>' + esc(s.name) + '</strong>' + bar(count, s.rows.length) + '<span class="count">' + count + ' / ' + s.rows.length + '</span>' + icon(open ? 'down' : 'right') + '</button>' + (open ? rows.map(l => '<div class="row ' + (get(l, 'done') ? 'done' : '') + '"><input type="checkbox" data-done="' + l.uid + '" aria-label="Completed: ' + esc(l.title) + '" ' + (get(l, 'done') ? 'checked' : '') + '><div class="details"><img class="lectureThumb" loading="lazy" alt="" src="https://i.ytimg.com/vi/' + l.id + '/mqdefault.jpg"><a data-watch="' + l.uid + '" href="' + link(l) + '" target="_blank" rel="noopener" title="' + esc(l.videoTitle) + '">' + esc(l.title) + '</a><small>' + esc(l.sy) + (l.workedExample || (currentStudy().subjectId === 'cd' && /(?:example|solved)/i.test(l.title)) ? ' · Worked example' : '') + (l.topicIds.some(t => ['3.3', '3.4', '3.5', '3.8', '3.9', '3.10'].includes(t)) ? ' · Numerical practice' : '') + ' · ' + esc(l.educator) + ' · ' + lectureDuration(l) + ' · <a class="watchText" data-watch="' + l.uid + '" href="' + link(l) + '">Watch</a></small></div>' + action(l, 'note', 'Personal notes', !!get(l, 'note')) + action(l, 'revision', 'Mark for revision', get(l, 'revision')) + '</div>').join('') : '') + '</article>';
     }).join('') || '<p class="empty">No lectures match this view.</p>';
 }
 function action(l, field, label, on) { return '<button class="icon ' + (on ? 'on' : '') + '" data-' + field + '="' + l.uid + '" aria-label="' + label + ' for ' + esc(l.title) + '" title="' + label + '" ' + (field === 'revision' ? 'aria-pressed="' + on + '"' : '') + '>' + icon(field === 'revision' ? 'bookmark' : 'note') + '</button>'; }
@@ -503,7 +512,7 @@ function renderPanel() {
     const study = currentStudy(), { topics, practice, stages, lectures } = study;
     let html = '<div class="panelHead"><h2>' + (page === 'Numerical practice' ? study.practiceLabel : page) + '</h2></div>';
     if (study.subjectId === 'cd' && (page === 'Numerical practice' || page === 'Syllabus coverage' || (page === 'Lecture roadmap' && study.revisionOnly))) {
-        $('panel').innerHTML = '<div class="panelHead"><h2>' + (page === 'Lecture roadmap' ? 'Revision checklist' : page === 'Numerical practice' ? 'Concept checklist' : 'Syllabus and revision notes') + '</h2></div>' + compilerConceptPanel(study);
+        $('panel').innerHTML = '<div class="panelHead"><h2>' + (page === 'Syllabus coverage' ? 'Syllabus and revision notes' : 'Revision notes') + '</h2></div>' + compilerNotesPanel(study);
         return;
     }
     if (study.subjectId === 'cd' && page === 'Study priorities') {
@@ -512,7 +521,7 @@ function renderPanel() {
         return;
     }
     if (page === 'Lecture roadmap') {
-        html += '<div class="tools"><div class="chips">' + ['All', 'Incomplete', 'Completed', 'Revision'].map(f => '<button data-filter="' + f + '" aria-pressed="' + (f === filter) + '" class="' + (f === filter ? 'active' : '') + '">' + f + '</button>').join('') + '</div><label class="search">' + icon('find') + '<input aria-label="Search lectures" id="search" placeholder="Search lectures…" value="' + esc(query) + '"></label></div><div id="groups">' + groups() + '</div>' + (study.subjectId === 'cd' ? '<details class="block compilerExtra"' + (conceptDetailsOpen ? ' open' : '') + '><summary>Concise topic notes and concept checklist</summary>' + compilerConceptPanel(study) + '</details>' : '');
+        html += '<div class="tools"><div class="chips">' + ['All', 'Incomplete', 'Completed', 'Revision'].map(f => '<button data-filter="' + f + '" aria-pressed="' + (f === filter) + '" class="' + (f === filter ? 'active' : '') + '">' + f + '</button>').join('') + '</div><label class="search">' + icon('find') + '<input aria-label="Search lectures" id="search" placeholder="Search lectures…" value="' + esc(query) + '"></label></div><div id="groups">' + groups() + '</div>' + (study.subjectId === 'cd' ? '<details class="block compilerExtra"' + (conceptDetailsOpen ? ' open' : '') + '><summary>Concise topic notes</summary>' + compilerNotesPanel(study) + '</details>' : '');
     }
     if (page === 'Syllabus coverage')
         html += '<p class="info">Coverage follows lectures marked complete. Track mastery independently in ' + study.practiceLabel + '.</p><div class="block">' + topics.map((t, i) => { let sy = study.number + '.' + (i + 1), ls = lectures.filter(l => topicMatch(l, sy)), n = ls.filter(l => get(l, 'done')).length; return '<div class="setting"><span><b>' + sy + '</b> ' + esc(t) + '</span><small>' + n + '/' + ls.length + ' · ' + (n === 0 ? 'Not started' : n === ls.length ? 'Completed' : 'In progress') + '</small></div>' + topicDetail(sy, ls); }).join('') + '</div>';
@@ -533,15 +542,8 @@ $('panel').onclick = e => {
     if (!b)
         return;
     const d = b.dataset;
-    if (d.concept && b instanceof HTMLInputElement) {
-        const k = conceptKey(d.concept);
-        if (Object.hasOwn(defaults, k)) {
-            const before = availableDecks('cd');
-            void changed(patchValue(k, b.checked));
-            announceNewDecks(before, 'cd');
-            render();
-            [...document.querySelectorAll('[data-concept]')].find(el => el.dataset.concept === d.concept)?.focus({ preventScroll: true });
-        }
+    if (d.revisionReading) {
+        openRevisionReading(d.revisionReading);
         return;
     }
     if (d.conceptNote) {

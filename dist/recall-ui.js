@@ -36,9 +36,8 @@ function recallStats(subject) {
 function renderSubjectSummary(subject) {
     const all = subject.modules.map(id => studyModules[id]), key = all[0].subjectId;
     const progress = all.map(m => {
-        const topics = revisionConcepts(m), r = viewingSummary(m, state);
-        return m.revisionOnly ? { done: topics.filter(c => state[conceptKey(c.id)]).length, total: topics.length, seconds: 0 } :
-            { done: r.done, total: m.lectures.length, seconds: r.seconds };
+        const r = viewingSummary(m, state);
+        return { done: r.coreDone, total: r.coreTotal, seconds: r.seconds };
     });
     const done = progress.reduce((sum, r) => sum + r.done, 0), total = progress.reduce((sum, r) => sum + r.total, 0);
     const marks = progress.reduce((sum, r, i) => sum + (r.total ? r.done / r.total * all[i].marks : 0), 0);
@@ -48,8 +47,8 @@ function renderSubjectSummary(subject) {
     const duration = (min) => Math.floor(min / 60) + 'h ' + min % 60 + 'm';
     const host = $('subjectStats');
     host.innerHTML = '<section class="block subjectOverview"><h2>' + esc(subject.label) + ' overview</h2><div class="subjectSummaryGrid">' +
-        '<div><strong>' + progressPercent(done, total) + '%</strong><small>Preparation progress</small></div>' +
-        '<div><strong>' + Number(marks.toFixed(1)) + ' / 60</strong><small>Estimated marks coverage</small></div>' +
+        '<div><strong>' + progressPercent(done, total) + '%</strong><small>' + (key === 'cd' ? 'Core lecture progress' : 'Preparation progress') + '</small></div>' +
+        '<div><strong>' + Number(marks.toFixed(1)) + ' / 60</strong><small>' + (key === 'cd' ? 'Estimated coverage from lectures' : 'Estimated marks coverage') + '</small></div>' +
         '<div><strong>' + duration(Math.ceil(seconds / 60 / speed)) + '</strong><small>Subject video time at ' + speed + '×</small></div>' +
         '<div><strong>' + stats.mastered + ' mastered · ' + stats.due.length + ' due</strong><small>Flashcard review</small></div></div>' +
         '<p class="info">Priority: ' + all.map(m => 'M' + m.number).join(', ') + ' · ' + (decks.length ? esc(decks.slice(0, 2).map(d => d.title).join(' · ')) + ' recently unlocked' : unlocked.size ? unlocked.size + ' topic decks available' : 'No topic decks unlocked yet') + '</p>' +
@@ -64,8 +63,26 @@ function renderSubjectSummary(subject) {
             jumpToRequirement({ label: c.title, module: 'cd-m1', ref: c.id, done: false });
     });
 }
-function compilerConceptPanel(study) {
-    return '<div class="conceptGrid">' + revisionConcepts(study).map(c => '<article class="block conceptCard"><label class="conceptLabel"><input type="checkbox" data-concept="' + esc(c.id) + '" ' + (state[conceptKey(c.id)] ? 'checked' : '') + '><span><small>' + esc(c.syllabus) + '</small><strong>' + esc(c.title) + '</strong></span></label><p>' + esc(c.note) + '</p><ul>' + c.checklist.map(item => '<li>' + esc(item) + '</li>').join('') + '</ul><button class="quiet" type="button" data-concept-note="' + esc(c.id) + '">Personal notes' + (state[conceptNoteKey(c.id)] ? ' · Saved' : '') + '</button></article>').join('') + '</div>';
+function compilerNotesPanel(study) {
+    return '<div class="conceptGrid">' + revisionConcepts(study).map(c => '<article class="block conceptCard"><small>' + esc(c.syllabus) + '</small><h3>' + esc(c.title) + '</h3><button type="button" class="quiet" data-revision-reading="' + esc(c.id) + '">Read revision note</button><button class="quiet" type="button" data-concept-note="' + esc(c.id) + '">Personal notes' + (state[conceptNoteKey(c.id)] ? ' · Saved' : '') + '</button></article>').join('') + '</div>';
+}
+function openRevisionReading(id) {
+    const c = compilerContent.concepts.find(x => x.id === id);
+    if (!c)
+        return;
+    const tracked = studyModules[('cd-m' + c.module)].revisionOnly;
+    modal('<p class="eyebrow">' + esc(c.syllabus) + ' · REVISION NOTE</p><h2>' + esc(c.title) + '</h2><p>' + esc(c.note) + '</p>' +
+        (tracked ? '<button type="button" id="doneReading">Done reading</button>' : ''));
+    const done = document.getElementById('doneReading');
+    if (done)
+        done.onclick = () => {
+            const before = availableDecks('cd'), delta = revisionReadPatch(id, state);
+            if (delta) {
+                void changed(delta);
+                announceNewDecks(before, 'cd');
+            }
+            $('dialog').close();
+        };
 }
 function openConceptNote(id) {
     const c = compilerContent.concepts.find(x => x.id === id);
@@ -96,9 +113,9 @@ function recallHome(subject) {
     const items = recallDecksFor(subject), stats = recallStats(subject), session = state[recallSessionKey(subject)];
     const decks = items.map(d => {
         const rs = deckRequirements(subject, d, state), done = rs.filter(r => r.done).length, enabled = requirementsMet(rs);
-        return '<article class="block recallDeck"><small>M' + d.module + ' · ' + d.cards.length + ' cards</small><h3>' + esc(d.title) + '</h3><p>' + done + ' / ' + rs.length + ' prerequisites complete</p>' + bar(done, Math.max(1, rs.length)) +
+        return '<article class="block recallDeck"><small>M' + d.module + ' · ' + d.cards.length + ' cards</small><h3>' + esc(d.title) + '</h3>' + (subject === 'cn' ? '<p>' + done + ' / ' + rs.length + ' prerequisites complete</p>' + bar(done, Math.max(1, rs.length)) : '') +
             (enabled ? recallButton('deck:' + d.id, 'Study deck', 'quizPrimary') + recallButton('shuffle:' + d.id, 'Shuffle') :
-                recallButton('locked:' + d.id, 'Locked · view prerequisites')) + '</article>';
+                recallButton('locked:' + d.id, subject === 'cd' ? (studyModules[('cd-m' + d.module)].revisionOnly ? 'Review notes to unlock' : 'Go to remaining lecture') : 'Locked · view prerequisites')) + '</article>';
     }).join('');
     return '<div class="eyebrow"><span class="tick"></span> ' + esc(subjectFor(subject)?.label ?? subject) + '</div><h1>Flashcards</h1><p class="sub">Recall an answer before flipping, then rate how well you knew it.</p>' +
         '<article class="quizLaunch"><div><h2>Quick 10</h2><p>Ten high-yield cards, always unlocked.</p><p>' + stats.mastered + ' of ' + stats.total + ' mastered · ' + stats.due.length + ' due for review</p></div><div class="quizActions">' +
@@ -126,6 +143,16 @@ function renderRecall(subject) {
 }
 function showLocked(subject, deck) {
     const rs = deckRequirements(subject, deck, state), missing = rs.filter(r => !r.done);
+    if (subject === 'cd') {
+        const next = missing[0];
+        if (!next)
+            return;
+        if (studyModules[next.module].revisionOnly)
+            openRevisionReading(next.ref);
+        else
+            jumpToRequirement(next);
+        return;
+    }
     modal('<h2>' + esc(deck.title) + '</h2><p>' + deck.cards.length + ' cards · ' + (rs.length - missing.length) + ' of ' + rs.length + ' prerequisites complete</p>' +
         '<ul class="missingList">' + missing.map((r, i) => '<li><button class="quiet" type="button" data-jump="' + i + '">' + esc(r.label) + '</button></li>').join('') + '</ul>');
     $('dialogBody').querySelectorAll('[data-jump]').forEach(b => b.onclick = () => {

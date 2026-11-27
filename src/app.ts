@@ -46,10 +46,10 @@ async function flush(){
 window.addEventListener('online',flush);window.addEventListener('focus',()=>{if(!$('dialog').open)flush()});
 const roadmapHash=()=>location.hash.startsWith('#computer-networks')||location.hash.startsWith('#lectures/');
 let page:Page=location.hash.startsWith('#flashcards')?'Flashcards':roadmapHash()?'Lecture roadmap':'Exam planner';
-type StudySubject = {key:string;label:string;modules:ModuleId[];preparationOrder?:[number,string][]};
+type StudySubject = {key:string;label:string;compact?:string;modules:ModuleId[];preparationOrder?:[number,string][]};
 const studySubjects:StudySubject[]=[
- {key:'cn',label:'Computer Networks',modules:['m3','m4'],preparationOrder:[[3,'Network Layer'],[4,'Transport Layer'],[2,'Data Link Layer'],[1,'Intro to Networking']]},
- {key:'cd',label:'Compiler Design',modules:['cd-m2','cd-m4','cd-m1','cd-m3'],preparationOrder:[[2,'Bottom Up Parsing'],[4,'Code Generation'],[1,'Compiler Basics and Top Down Parsing'],[3,'Intermediate Code Generation']]},
+ {key:'cn',label:'Computer Networks',compact:'CN',modules:['m3','m4'],preparationOrder:[[3,'Network Layer'],[4,'Transport Layer'],[2,'Data Link Layer'],[1,'Intro to Networking']]},
+ {key:'cd',label:'Compiler Design',compact:'CD',modules:['cd-m2','cd-m4','cd-m1','cd-m3'],preparationOrder:[[2,'Bottom Up Parsing'],[4,'Code Generation'],[1,'Compiler Basics and Top Down Parsing'],[3,'Intermediate Code Generation']]},
  ...examSchedule.filter(e=>!['C.N.','C.D.'].includes(e.code)).map(e=>({key:e.code.toLowerCase().replace(/[^a-z]/g,''),label:e.label,modules:[]}))
 ];
 const subjectFor=(id:string)=>studySubjects.find(s=>s.key===id);
@@ -73,7 +73,8 @@ function jumpToRequirement(req:Requirement){
   const section=currentStudy().sections.find(s=>s.rows.includes(lecture));
   if(section){collapsed.delete(section.name);roadmapManuallyChanged=true;render()}
  }
- const el=[...document.querySelectorAll<HTMLElement>('[data-concept], [data-done]')].find(n=>n.dataset.concept===req.ref||n.dataset.done===req.ref);
+ if(!lecture&&studyModules[req.module].revisionOnly){openRevisionReading(req.ref);return}
+ const el=[...document.querySelectorAll<HTMLElement>('[data-done]')].find(n=>n.dataset.done===req.ref);
  el?.scrollIntoView({block:'center'});el?.focus({preventScroll:true});
 }
 let filter='All',query='',collapsed=new Set<string>(),roadmapManuallyChanged=false,conceptDetailsOpen=false;
@@ -136,6 +137,10 @@ function togglePageMenu(open:boolean){
  document.body.classList.toggle('sidebarExpanded',open);
 }
 sidebarToggle.onclick=()=>togglePageMenu(sidebarToggle.getAttribute('aria-expanded')!=='true');
+$('plannerSidebar').addEventListener('click',event=>{
+ // Do not override the dedicated toggle or cancel a control's own click.
+ if(!event.composedPath().includes(sidebarToggle)&&sidebarToggle.getAttribute('aria-expanded')!=='true')togglePageMenu(true);
+});
 document.addEventListener('keydown',event=>{
  if(event.key==='Escape'&&sidebarToggle.getAttribute('aria-expanded')==='true'&&!$('dialog').open){togglePageMenu(false);sidebarToggle.focus()}
 });
@@ -190,7 +195,7 @@ $('nav').onclick=e=>{const b=eventElement(e)?.closest<HTMLButtonElement>('button
  openPage(b.dataset.page as Page,true);
 }};
 const subjectSelect=$('subjectSelect');
-subjectSelect.innerHTML=studySubjects.map(s=>'<option value="'+s.key+'">'+esc(s.label)+'</option>').join('');
+subjectSelect.innerHTML=studySubjects.map(s=>'<option value="'+s.key+'" aria-label="'+esc(s.label)+'">'+esc(s.compact??s.label)+'</option>').join('');
 subjectSelect.onchange=()=>{selectStudySubject(subjectSelect.value);recallStudying=false;openPage(page==='Flashcards'?'Flashcards':'Lecture roadmap');subjectSelect.focus({preventScroll:true})};
 $('moduleSwitch').onclick=e=>{
  const button=eventElement(e)?.closest<HTMLButtonElement>('button[data-module]');if(!button||button.dataset.module===activeModule)return;
@@ -220,6 +225,8 @@ function syncStudyTimer(){
 }
 function render(){document.documentElement.classList.toggle('dark',state.theme==='dark');const themeLabel=state.theme==='light'?'Switch to dark mode':'Switch to light mode';$('theme').setAttribute('aria-label',themeLabel);$('theme').title=themeLabel;document.querySelectorAll<HTMLButtonElement>('[data-page]').forEach(b=>{b.classList.toggle('active',b.dataset.page===page);b.setAttribute('aria-current',b.dataset.page===page?'page':'false')});
  const planner=page==='Exam planner';
+ const masteryButton=mustQuery<HTMLButtonElement>('[data-page="Numerical practice"]',$('nav'));
+ masteryButton.hidden=activeSubject==='cd';
  renderPreparationOrder(studySubjects.find(s=>s.key===activeSubject));
  $('examPlanner').hidden=!planner;$('studyWorkspace').hidden=planner;
  syncStudyTimer();
@@ -240,7 +247,7 @@ function render(){document.documentElement.classList.toggle('dark',state.theme==
   renderRecall(activeSubject==='cd'?'cd':'cn');return;
  }
  $('moduleSwitch').hidden=emptySubject;
- const switchHTML='<span>'+esc(subject.label)+'</span>'+subject.modules.map(id=>'<button type="button" data-module="'+id+'">'+String(studyModules[id].number).padStart(2,'0')+' · '+esc(studyModules[id].name)+'</button>').join('');
+ const switchHTML='<span title="'+esc(subject.label)+'">'+esc(subject.compact??subject.label)+'</span>'+subject.modules.map(id=>'<button type="button" data-module="'+id+'">'+String(studyModules[id].number).padStart(2,'0')+' · '+esc(studyModules[id].name)+'</button>').join('');
  if($('moduleSwitch').dataset.subject!==subject.key){$('moduleSwitch').innerHTML=switchHTML;$('moduleSwitch').dataset.subject=subject.key}
  $('studyWorkspace').classList.toggle('emptySubject',emptySubject);
  if(emptySubject){
@@ -250,22 +257,21 @@ function render(){document.documentElement.classList.toggle('dark',state.theme==
  document.querySelectorAll<HTMLButtonElement>('[data-module]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.module===study.id)));
  $('moduleEyebrow').innerHTML='<span class="tick"></span> MODULE 0'+study.number+' · '+study.weight+' estimated';
  $('moduleTitle').textContent=study.name;
- $('moduleDescription').textContent=(study.revisionOnly?'Checklist, notes and flashcards · ':lectures.length+' lectures · '+study.sections.length+' sections · ')+study.marks+' of 60 marks (estimated)';
- const masteryButton=mustQuery<HTMLButtonElement>('[data-page="Numerical practice"]',$('nav'));
+ $('moduleDescription').textContent=(study.revisionOnly?'Revision notes and flashcards · ':lectures.length+' lectures · '+study.sections.length+' sections · ')+study.marks+' of 60 marks (estimated)';
  mustQuery('.railLabel',masteryButton).textContent=study.practiceLabel;
  masteryButton.title=study.practiceLabel;masteryButton.setAttribute('aria-label',study.practiceLabel);
  if(page==='Lecture roadmap'&&!roadmapManuallyChanged){
   const initial=initialLectureSection(study,state);
   collapsed=new Set(study.sections.filter(s=>s.name!==initial).map(s=>s.name));
  }
- const {remaining,done,covered,minutes,unknown}=viewingSummary(study,state);
+ const {remaining,done,covered,minutes,unknown,coreDone,coreTotal}=viewingSummary(study,state);
  const isRevision=Boolean(study.revisionOnly);
  mustQuery<HTMLElement>('.hero').hidden=isRevision;
+ $('stats').hidden=isRevision;
  if(isRevision){
-  const topics=revisionConcepts(study), completed=topics.filter(c=>state[conceptKey(c.id)]).length;
-  $('stats').innerHTML='<div class="stat progressStat"><div class="statHead">Revision progress</div>'+progressRing(study.id,completed,topics.length)+'</div><div class="stat"><div class="statHead">Concepts checked</div><strong>'+completed+' / '+topics.length+'</strong></div>';
+  $('stats').replaceChildren();
   $('overviewSummary').textContent='Mid-semester revision · no full lecture playlist';
-  animateProgressRing();renderPanel();return;
+  renderPanel();return;
  }
  const next=nextLecture(lectures,state,state[`${study.id}/lastActive`]);
  $('nextTitle').textContent=next?next.title:'Roadmap completed';
@@ -273,8 +279,8 @@ function render(){document.documentElement.classList.toggle('dark',state.theme==
  $('resume').style.display=next?'inline-flex':'none';if(next)$('resume').href=link(next);
  updateThumbnail(next);
  $('resume').dataset.watch=$('previewLink').dataset.watch=next?.uid||'';
- $('overviewSummary').textContent=covered+' / '+study.topics.length+' syllabus topics complete · '+(study.subjectId==='cd'?revisionConcepts(study).filter(c=>state[conceptKey(c.id)]).length:study.practice.filter(p=>state[pk(p,study.id)]==='Mastered').length)+' / '+(study.subjectId==='cd'?revisionConcepts(study).length:study.practice.length)+' '+study.masteryLabel+' mastered';
- $('stats').innerHTML='<div class="stat progressStat"><div class="statHead">'+icon('chart')+'Overall progress</div>'+progressRing(study.id,done,lectures.length)+'</div><div class="stat"><div class="statHead">'+icon('check')+'Lectures completed</div><strong>'+done+' <span class="count">/ '+lectures.length+'</span></strong><small>'+remaining.length+' remaining</small></div><div class="stat"><div class="statHead">'+icon('clock')+'Viewing time <select aria-label="Playback speed" id="speed">'+options(speeds,state[moduleSpeed],'×')+'</select></div><strong>'+Math.floor(minutes/60)+'h '+minutes%60+'m</strong><small>Remaining at selected speed'+(study.subjectId==='cd'&&unknown?' · '+unknown+' unknown':'')+'</small></div>';
+ $('overviewSummary').textContent=covered+' / '+study.topics.length+' syllabus topics complete'+(study.subjectId==='cn'?' · '+study.practice.filter(p=>state[pk(p,study.id)]==='Mastered').length+' / '+study.practice.length+' '+study.masteryLabel+' mastered':'');
+ $('stats').innerHTML='<div class="stat progressStat"><div class="statHead">'+icon('chart')+(coreTotal===lectures.length?'Overall progress':'Core lecture progress')+'</div>'+progressRing(study.id,coreDone,coreTotal)+'</div><div class="stat"><div class="statHead">'+icon('check')+'Lectures completed</div><strong>'+done+' <span class="count">/ '+lectures.length+'</span></strong><small>'+remaining.length+' remaining</small></div><div class="stat"><div class="statHead">'+icon('clock')+'Viewing time <select aria-label="Playback speed" id="speed">'+options(speeds,state[moduleSpeed],'×')+'</select></div><strong>'+Math.floor(minutes/60)+'h '+minutes%60+'m</strong><small>Remaining at selected speed'+(study.subjectId==='cd'&&unknown?' · '+unknown+' unknown':'')+'</small></div>';
  animateProgressRing();
  $('speed').onchange=e=>{changed(patchValue(moduleSpeed,Number(inputValue(e))));render()};renderPanel()}
 function updateThumbnail(lecture:Lecture|undefined) {
@@ -301,7 +307,7 @@ function updateThumbnail(lecture:Lecture|undefined) {
 function matches(l:Lecture){return (filter==='All'||filter==='Completed'&&get(l,'done')||filter==='Incomplete'&&!get(l,'done')||filter==='Revision'&&get(l,'revision'))&&[l.title,l.videoTitle,l.educator,l.sy].join(' ').toLowerCase().includes(query.toLowerCase().trim())}
 function lectureDuration(l:Lecture){return (l.startSeconds!=null?'Chapter · ':'')+(l.time||'Duration unknown')}
 function groups(){return currentStudy().sections.map((s,i)=>{let rows=s.rows.filter(matches);if(!rows.length)return '';let count=s.rows.filter(l=>get(l,'done')).length,open=!collapsed.has(s.name);
- return '<article class="group"><button class="groupHead" data-section="'+i+'" aria-expanded="'+open+'"><span class="num">'+String(i+1).padStart(2,'0')+'</span><strong>'+esc(s.name)+'</strong>'+bar(count,s.rows.length)+'<span class="count">'+count+' / '+s.rows.length+'</span>'+icon(open?'down':'right')+'</button>'+(open?rows.map(l=>'<div class="row '+(get(l,'done')?'done':'')+'"><input type="checkbox" data-done="'+l.uid+'" aria-label="Completed: '+esc(l.title)+'" '+(get(l,'done')?'checked':'')+'><div class="details"><img class="lectureThumb" loading="lazy" alt="" src="https://i.ytimg.com/vi/'+l.id+'/mqdefault.jpg"><a data-watch="'+l.uid+'" href="'+link(l)+'" target="_blank" rel="noopener" title="'+esc(l.videoTitle)+'">'+esc(l.title)+'</a><small>'+esc(l.sy)+(l.topicIds.some(t=>['3.3','3.4','3.5','3.8','3.9','3.10'].includes(t))?' · Numerical practice':'')+' · '+esc(l.educator)+' · '+lectureDuration(l)+' · <a class="watchText" data-watch="'+l.uid+'" href="'+link(l)+'">Watch</a></small></div>'+action(l,'note','Personal notes',!!get(l,'note'))+action(l,'revision','Mark for revision',get(l,'revision'))+'</div>').join(''):'')+'</article>'}).join('')||'<p class="empty">No lectures match this view.</p>'}
+ return '<article class="group"><button class="groupHead" data-section="'+i+'" aria-expanded="'+open+'"><span class="num">'+String(i+1).padStart(2,'0')+'</span><strong>'+esc(s.name)+'</strong>'+bar(count,s.rows.length)+'<span class="count">'+count+' / '+s.rows.length+'</span>'+icon(open?'down':'right')+'</button>'+(open?rows.map(l=>'<div class="row '+(get(l,'done')?'done':'')+'"><input type="checkbox" data-done="'+l.uid+'" aria-label="Completed: '+esc(l.title)+'" '+(get(l,'done')?'checked':'')+'><div class="details"><img class="lectureThumb" loading="lazy" alt="" src="https://i.ytimg.com/vi/'+l.id+'/mqdefault.jpg"><a data-watch="'+l.uid+'" href="'+link(l)+'" target="_blank" rel="noopener" title="'+esc(l.videoTitle)+'">'+esc(l.title)+'</a><small>'+esc(l.sy)+(l.workedExample||(currentStudy().subjectId==='cd'&&/(?:example|solved)/i.test(l.title))?' · Worked example':'')+(l.topicIds.some(t=>['3.3','3.4','3.5','3.8','3.9','3.10'].includes(t))?' · Numerical practice':'')+' · '+esc(l.educator)+' · '+lectureDuration(l)+' · <a class="watchText" data-watch="'+l.uid+'" href="'+link(l)+'">Watch</a></small></div>'+action(l,'note','Personal notes',!!get(l,'note'))+action(l,'revision','Mark for revision',get(l,'revision'))+'</div>').join(''):'')+'</article>'}).join('')||'<p class="empty">No lectures match this view.</p>'}
 function action(l:Lecture,field:'note'|'revision',label:string,on:boolean){return '<button class="icon '+(on?'on':'')+'" data-'+field+'="'+l.uid+'" aria-label="'+label+' for '+esc(l.title)+'" title="'+label+'" '+(field==='revision'?'aria-pressed="'+on+'"':'')+'>'+icon(field==='revision'?'bookmark':'note')+'</button>'}
 function topicDetail(id:string,matched:Lecture[]){
  const n=topicNotes[id]??m4Notes[id];
@@ -311,19 +317,19 @@ function topicDetail(id:string,matched:Lecture[]){
 }
 function renderPanel(){const study=currentStudy(),{topics,practice,stages,lectures}=study;let html='<div class="panelHead"><h2>'+(page==='Numerical practice'?study.practiceLabel:page)+'</h2></div>';
  if(study.subjectId==='cd'&&(page==='Numerical practice'||page==='Syllabus coverage'||(page==='Lecture roadmap'&&study.revisionOnly))){
-  $('panel').innerHTML='<div class="panelHead"><h2>'+ (page==='Lecture roadmap'?'Revision checklist':page==='Numerical practice'?'Concept checklist':'Syllabus and revision notes')+'</h2></div>'+compilerConceptPanel(study);return;
+  $('panel').innerHTML='<div class="panelHead"><h2>'+(page==='Syllabus coverage'?'Syllabus and revision notes':'Revision notes')+'</h2></div>'+compilerNotesPanel(study);return;
  }
  if(study.subjectId==='cd'&&page==='Study priorities'){
   $('panel').innerHTML=html+'<div class="block"><h3>Estimated preparation priority</h3><p>M2 and M4 cover new content (42 of 60 marks). M1 and M3 cover mid-semester revision (18 of 60 marks). Individual marks are estimates, not official paper weightage.</p>'+
    (subjectFor('cd')?.modules??[]).map(id=>{const m=studyModules[id];return '<div class="setting"><span>M'+m.number+' · '+esc(m.name)+'</span><strong>'+m.marks+' marks · '+[8,8,7,7][m.number-1]+' hours</strong></div>'}).join('')+'</div>';return;
  }
- if(page==='Lecture roadmap'){html+='<div class="tools"><div class="chips">'+['All','Incomplete','Completed','Revision'].map(f=>'<button data-filter="'+f+'" aria-pressed="'+(f===filter)+'" class="'+(f===filter?'active':'')+'">'+f+'</button>').join('')+'</div><label class="search">'+icon('find')+'<input aria-label="Search lectures" id="search" placeholder="Search lectures…" value="'+esc(query)+'"></label></div><div id="groups">'+groups()+'</div>'+(study.subjectId==='cd'?'<details class="block compilerExtra"'+(conceptDetailsOpen?' open':'')+'><summary>Concise topic notes and concept checklist</summary>'+compilerConceptPanel(study)+'</details>':'')}
+ if(page==='Lecture roadmap'){html+='<div class="tools"><div class="chips">'+['All','Incomplete','Completed','Revision'].map(f=>'<button data-filter="'+f+'" aria-pressed="'+(f===filter)+'" class="'+(f===filter?'active':'')+'">'+f+'</button>').join('')+'</div><label class="search">'+icon('find')+'<input aria-label="Search lectures" id="search" placeholder="Search lectures…" value="'+esc(query)+'"></label></div><div id="groups">'+groups()+'</div>'+(study.subjectId==='cd'?'<details class="block compilerExtra"'+(conceptDetailsOpen?' open':'')+'><summary>Concise topic notes</summary>'+compilerNotesPanel(study)+'</details>':'')}
  if(page==='Syllabus coverage')html+='<p class="info">Coverage follows lectures marked complete. Track mastery independently in '+study.practiceLabel+'.</p><div class="block">'+topics.map((t,i)=>{let sy=study.number+'.'+(i+1),ls=lectures.filter(l=>topicMatch(l,sy)),n=ls.filter(l=>get(l,'done')).length;return '<div class="setting"><span><b>'+sy+'</b> '+esc(t)+'</span><small>'+n+'/'+ls.length+' · '+(n===0?'Not started':n===ls.length?'Completed':'In progress')+'</small></div>'+topicDetail(sy,ls)}).join('')+'</div>';
  if(page==='Numerical practice')html+='<p class="info">'+(study.id==='m4'?'Track what you can explain or apply without your notes.':'Update each skill after solving problems independently.')+'</p><div class="block">'+practice.map(p=>'<label class="setting">'+esc(p)+'<select data-practice="'+pk(p,study.id)+'">'+options(stages,state[pk(p,study.id)])+'</select></label>').join('')+'</div>';
  if(page==='Study priorities')html+=(study.id==='m3'?'<div class="block"><h3>Recommended study effort</h3>'+['IPv4, CIDR, subnetting and supernetting','Routing algorithms','NAT, IPv6 and network protocols','Fundamentals and congestion control'].map((t,i)=>'<div class="setting">'+t+'<b>'+[40,30,20,10][i]+'%</b></div>').join('')+'</div>':'')+'<div class="block"><h3>Estimated exam weight · 60 marks</h3>'+['03 · Network Layer','04 · Transport Layer','02 · Data Link Layer','01 · Introduction to Networking'].map((t,i)=>'<div class="setting">'+t+'<span>'+['22.4 marks · 37.33%','19.6 marks · 32.67%','9.6 marks · 16%','8.4 marks · 14%'][i]+'</span></div>').join('')+'</div>';
  $('panel').innerHTML=html;const extra=$('panel').querySelector<HTMLDetailsElement>('.compilerExtra');if(extra)extra.ontoggle=()=>{if(extra.isConnected)conceptDetailsOpen=extra.open};if(document.getElementById('search'))$('search').oninput=e=>{query=inputValue(e);roadmapManuallyChanged=true;collapsed.clear();$('groups').innerHTML=groups()} }
 $('panel').onclick=e=>{const b=eventElement(e)?.closest<HTMLButtonElement|HTMLInputElement>('button,input');if(!b)return;const d=b.dataset;
- if(d.concept&&b instanceof HTMLInputElement){const k=conceptKey(d.concept);if(Object.hasOwn(defaults,k)){const before=availableDecks('cd');void changed(patchValue(k,b.checked));announceNewDecks(before,'cd');render();[...document.querySelectorAll<HTMLElement>('[data-concept]')].find(el=>el.dataset.concept===d.concept)?.focus({preventScroll:true})}return}
+ if(d.revisionReading){openRevisionReading(d.revisionReading);return}
  if(d.conceptNote){openConceptNote(d.conceptNote);return}
  const {sections,lectures}=currentStudy();if(page==='Lecture roadmap')roadmapManuallyChanged=true;if(d.filter){filter=d.filter;collapsed.clear()}else if(d.section!==undefined){const name=sections[+d.section].name;collapsed.has(name)?collapsed.delete(name):collapsed.add(name)}else if(d.done||d.revision){const l=lectures.find(l=>l.uid===(d.done||d.revision));if(!l)return;const k=key(l,d.done?'done':'revision');const sub=currentStudy().subjectId, before=availableDecks(sub);changed(patchValue(k,!state[k]));announceNewDecks(before,sub)}else if(d.note){const lecture=lectures.find(l=>l.uid===d.note);if(lecture)note(lecture);return}else return;render();if(d.done)document.querySelector('[data-done="'+d.done+'"]')?.closest('.row')?.classList.add('toggled');if(b.dataset.done||b.dataset.revision||b.dataset.section!==undefined||d.filter){const attr=Object.keys(d)[0];(attr?document.querySelector<HTMLElement>('[data-'+attr+'="'+d[attr]+'"]'):null)?.focus({preventScroll:true})}};
 $('panel').onchange=e=>{const select=eventElement(e);if(select instanceof HTMLSelectElement&&select.dataset.practice)changed(patchValue(select.dataset.practice as `${ModuleId}/practice/${string}`,select.value))};

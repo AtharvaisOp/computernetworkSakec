@@ -756,12 +756,6 @@ const compilerContent:{concepts:RevisionConcept[];decks:RecallDeck[];quick:Recal
      "kind": "theory"
     },
     {
-     "id": "cd-optimization-07",
-     "question": "What is peephole optimization?",
-     "answer": "Inspecting a small window of adjacent instructions and replacing a pattern with an equivalent better one.",
-     "kind": "theory"
-    },
-    {
      "id": "cd-optimization-08",
      "question": "What is constant folding?",
      "answer": "Evaluating a compile-time constant expression during compilation.",
@@ -1390,7 +1384,7 @@ const compilerContent:{concepts:RevisionConcept[];decks:RecallDeck[];quick:Recal
    "module": 4,
    "syllabus": "4.1",
    "title": "Common optimization techniques",
-   "note": "Fold constants, propagate known values, reuse a common expression when safe, and eliminate genuinely dead operations. Loop optimizations include safe invariant motion and induction-variable strength reduction. Peephole optimization changes a small instruction window.",
+   "note": "Fold constants, propagate known values, reuse a common expression when safe, and eliminate genuinely dead operations. Loop optimizations include safe invariant motion and induction-variable strength reduction.",
    "checklist": [
     "Apply folding and propagation",
     "Find a safe common expression",

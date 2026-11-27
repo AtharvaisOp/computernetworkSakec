@@ -5,22 +5,26 @@ const compilerDefinitions=[
  ['Intermediate Code Generation',8,['Semantic analysis, SDDs and attributes','Evaluation order, S-attributed and L-attributed definitions','Intermediate code representations']],
  ['Code Generation',20,['Optimization techniques','Basic blocks and flow graphs','Liveness analysis','Code generator design and algorithms']],
 ] as const;
+// Retired resources are accepted only as saved history, not study material.
+const retiredCompilerLecture:LectureId='cd-m4-l03';
+const retiredCompilerCard='cd-optimization-07';
 const compilerSectionLayout:Record<string,[string,number[]][]>={
- 'cd-m2':[['Handles and shift-reduce parsing',[1,2,3]],['Operator precedence',[4,5,6]],['LR families and parsing tables',[7,8,9,10,11]]],
- 'cd-m4':[['Code optimization',[1,2,3,4,5]],['Control flow and liveness',[6,7]],['Generating target code',[8,9]]],
+ 'cd-m2':[['Handles and shift-reduce parsing',[1,2,3]],['Operator precedence',[4,5,6,12]],['LR families and parsing tables',[7,8,9,10,13,11]]],
+ 'cd-m4':[['Code optimization',[1,2,4,5]],['Control flow and liveness',[6,7]],['Generating target code',[8,9,10]]],
 };
 const compilerModuleData=Object.fromEntries(compilerModules.map((id,index)=>{
  const [name,marks,topics]=compilerDefinitions[index], number=index+1;
+ let visibleNumber=0;
  const sections:LectureSection[]=(compilerSectionLayout[id]??[]).map(([name,order])=>({name,rows:order.flatMap(n=>{
   const row=compilerRows.find(r=>r.id===id+'-l'+String(n).padStart(2,'0'));
   if(!row)return [];
   const seconds=row.durationSeconds;
-  return [{n,title:row.title,sy:row.syllabusRef,educator:row.educator,id:row.videoId,uid:row.id as LectureId,
-    topicIds:[row.syllabusRef],conceptIds:row.conceptIds,time:seconds===null?null:Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0'),
-    videoTitle:row.title,durationSeconds:seconds,verificationStatus:row.playback.watch==='verified'&&row.playback.embed==='verified'?'verified':'playback-unverified',verificationDate:row.verificationDate}];
+  return [{n:++visibleNumber,title:row.title,sy:row.syllabusRef,educator:row.educator,id:row.videoId,uid:row.id as LectureId,
+    topicIds:[row.syllabusRef],conceptIds:row.conceptIds,workedExample:row.workedExample,time:seconds===null?null:Math.floor(seconds/60)+':'+String(seconds%60).padStart(2,'0'),
+    videoTitle:row.title,startSeconds:row.startSeconds,endSeconds:row.endSeconds,durationSeconds:seconds,verificationStatus:row.playback.watch==='verified'&&row.playback.embed==='verified'?'verified':'playback-unverified',verificationDate:row.verificationDate}];
  })}));
  const value:StudyModule={id,name,marks,weight:(100*marks/60).toFixed(2)+'%',sections,topics:[...topics],practice:[],
- practiceLabel:'Concept checklist',masteryLabel:'concepts',stages:['Not started','Mastered'],lectures:[],subjectId:'cd',number,
+ practiceLabel:'Revision notes',masteryLabel:'concepts',stages:['Not started','Mastered'],lectures:[],subjectId:'cd',number,
  revisionOnly:number===1||number===3};
  return [id,value];
 })) as Record<CompilerModuleId,StudyModule>;
