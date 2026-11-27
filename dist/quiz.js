@@ -133,6 +133,11 @@ document.addEventListener('click', e => {
         gotoQuiz(false);
         document.querySelector('[data-quiz="' + action + '"]')?.focus({ preventScroll: true });
     }
+    else if (action === 'recall') {
+        legacyQuizView = false;
+        playingQuiz = false;
+        openPage('Flashcards');
+    }
     else if (action === 'home' || action === 'resume')
         gotoQuiz(action === 'resume');
     else if (action === 'next')

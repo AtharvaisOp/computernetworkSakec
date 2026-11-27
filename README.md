@@ -1,6 +1,6 @@
 # Exam Planner
 
-An exam timetable with a live India Standard Time countdown and a Computer Networks study dashboard. Module 3 includes an ordered Network Layer lecture roadmap, syllabus coverage, progress, revision bookmarks, notes and numerical practice. The flashcard workspace includes 50 Network Layer questions and 50 Transport Layer questions.
+An exam timetable with a live India Standard Time countdown and study dashboards for Computer Networks and Compiler Design. Module 3 includes an ordered Network Layer lecture roadmap, syllabus coverage, progress, revision bookmarks, notes and numerical practice. The flashcard workspace includes 50 Network Layer questions and 50 Transport Layer questions.
 
 [Open Exam Planner](https://network-notebook-study.dependableskink8.chatgpt.site/)
 
@@ -67,3 +67,13 @@ In Schedule, open **Exam reminders**. Select an upcoming exam and a lead time, t
 Guest progress stays in the current browser. Signing in with ChatGPT enables account sync and keeps a device-local copy for offline recovery. Signing out does not erase either copy; avoid saving private notes on shared devices, and clear this site's browser data after exporting anything you need. Clearing browser data does not erase progress already synced online.
 
 **Schedule → Progress backup** downloads a JSON snapshot and restores compatible snapshots after confirmation. Restoring replaces the fields in the file. Keep downloaded backups private; they include your study notes and are not encrypted by the app. The timetable and learning resources are public; personal progress is not. YouTube serves thumbnails and the optional embedded player.
+
+## Compiler Design and subject-scoped review
+
+Use **Lectures → Subject → Compiler Design**. The study order is M2, M4, M1, M3. The new-content modules (M2 and M4) together represent 42 of 60 marks; the mid-semester revision modules (M1 and M3) represent 18. The individual module estimates (10/22/8/20) are planning guidance, not official paper weights. M1 and M3 use revision notes and concept checklists instead of full playlists.
+
+- `src/compiler.ts` defines the modules and their syllabus; `src/compiler-lectures.ts` stores stable lecture IDs, topics, linked concepts, watch URLs, durations, and separately tracked watch/embed evidence. M2 has 11 lectures and M4 has nine. The documented durations are playlist metadata or visible watch-page durations, not evidence of uninterrupted playback. The player exposes an external fallback and labels incomplete verification.
+- `src/compiler-content.ts` contains concise revision material and 150 topic cards (M1: 25, M2: 52, M3: 25, M4: 48) plus ten always-unlocked Quick 10 cards. The Computer Networks review workspace uses its existing questions and retains access to the classic multiple-choice rounds and their history.
+- `src/recall-model.ts` derives topic-deck eligibility from completed lectures for playlist modules and from completed checklist concepts for revision modules. Unchecking a prerequisite relocks the deck but never removes a review. Quick 10, due/missed review, resume, shuffle, and Again/Hard/Good/Easy scheduling are available in the new flashcard view.
+- The existing account and storage service remains in place. Computer Networks keys and old backups still work; Compiler Design modules, notes and completion have distinct keys, and review data has a subject and card ID. The Worker continues to scope storage by the signed-in identity and does not accept an alternate account identifier.
+- Run the existing Node commands above. GitHub Actions validates build output; it does not publish it. Publish through the existing ChatGPT Sites project without changing the site address, identity binding, or audience.

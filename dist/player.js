@@ -91,6 +91,10 @@ const lecturePlayer = (() => {
         frame.title = lecture.title + ' · YouTube video player';
         frame.src = youtubeEmbed(lecture, location.origin, saved);
         $('youtubeFallback').href = youtubeWatch(lecture, saved);
+        if (lecture.verificationStatus === 'playback-unverified') {
+            $('playerStatus').hidden = false;
+            $('playerStatus').textContent = 'Playback has not been independently confirmed. If it does not start here, try opening it on YouTube.';
+        }
         if (lecture.endSeconds != null) {
             const metadata = $('playerMeta');
             metadata.append(' · Chapter ends at ' + new Date(lecture.endSeconds * 1000).toISOString().slice(11, 19));

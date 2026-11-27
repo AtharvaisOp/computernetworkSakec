@@ -1,15 +1,16 @@
 const studyModules:Record<ModuleId,StudyModule>={
- m3:{id:'m3',name:'Network Layer',marks:22.4,weight:'37.33%',sections,topics,practice,practiceLabel:'Numerical practice',masteryLabel:'numerical skills',stages:['Not started','Practising','Mastered'],lectures:[]},
- m4:{id:'m4',name:'Transport Layer',marks:19.6,weight:'32.67%',sections:m4Sections,topics:m4Topics,practice:m4Concepts,practiceLabel:'Concept mastery',masteryLabel:'concepts',stages:['Not started','Learning','Practising','Mastered'],lectures:[]}
-};
+ m3:{id:'m3',subjectId:'cn',number:3,name:'Network Layer',marks:22.4,weight:'37.33%',sections,topics,practice,practiceLabel:'Numerical practice',masteryLabel:'numerical skills',stages:['Not started','Practising','Mastered'],lectures:[]},
+ m4:{id:'m4',subjectId:'cn',number:4,name:'Transport Layer',marks:19.6,weight:'32.67%',sections:m4Sections,topics:m4Topics,practice:m4Concepts,practiceLabel:'Concept mastery',masteryLabel:'concepts',stages:['Not started','Learning','Practising','Mastered'],lectures:[]},
+ ...(typeof compilerModuleData==='undefined'?{}:compilerModuleData)
+} as Record<ModuleId,StudyModule>;
 for(const mod of Object.values(studyModules))mod.lectures=mod.sections.flatMap(s=>s.rows);
 const lectures=studyModules.m3.lectures;
 const speeds=[1,1.25,1.5,1.75,2];
-const defaults={theme:'light',speed:1,'m4/speed':1} as ProgressState;
-const lectureModule=(l:Lecture):ModuleId=>l.uid.startsWith('m4-')?'m4':'m3';
+const defaults={theme:'light',speed:1,'m4/speed':1,lastSubject:'cn'} as ProgressState;
+const lectureModule=(l:Lecture):ModuleId=>l.uid.slice(0,l.uid.lastIndexOf('-l')) as ModuleId;
 const key=<F extends LectureField>(lecture:Lecture,field:F):`${ModuleId}/${LectureId}/${F}`=>`${lectureModule(lecture)}/${lecture.uid}/${field}`;
 const pk=(p:string,mod:ModuleId='m3')=>`${mod}/practice/${p.toLowerCase().replace(/[^a-z0-9]+/g,'-')}` as const;
-const speedKey=(mod:ModuleId):'speed'|'m4/speed'=>mod==='m3'?'speed':'m4/speed';
+const speedKey=(mod:ModuleId):'speed'|'m4/speed'|`${CompilerModuleId}/speed`=>mod==='m3'?'speed':`${mod}/speed`;
 for(const mod of Object.values(studyModules)){
  defaults[`${mod.id}/lastActive`]='';
  defaults[speedKey(mod.id)]=1;
@@ -20,7 +21,10 @@ for(const mod of Object.values(studyModules)){
 }
 function valid(data:unknown,strict=false):data is ProgressPatch{return data!==null && typeof data==='object' && !Array.isArray(data) && Object.entries(data).every(([k,v])=>{
  if(!Object.hasOwn(defaults,k))return false;
+ if(k==='lastSubject')return typeof v==='string'&&['cn','cd','bi','mad','ml','nlp'].includes(v);
+ if(k.startsWith('recall/'))return validateRecallValue(k,v);
  if(k.startsWith('quiz/'))return validQuizValue(k,v,strict);
+ if(k.startsWith('concept/')&&k.endsWith('/note'))return typeof v==='string'&&v.length<=8000;
  if(k==='theme')return ['dark','light'].includes(v);
  if(k==='speed'||k.endsWith('/speed'))return typeof v==='number'&&speeds.includes(v);
  const mod=studyModules[k.split('/')[0] as ModuleId];
@@ -53,14 +57,15 @@ function viewingSummary(mod:StudyModule,record:ProgressPatch) {
  const remaining=mod.lectures.filter(l=>!record[key(l,'done')]);
  const unknown=remaining.filter(l=>!l.time).length;
  const seconds=remaining.reduce((sum,l)=>{
+  if(l.durationSeconds!=null)return sum+l.durationSeconds;
   const parts=String(l.time||'0').split(':').map(Number);
   return sum+parts.reduce((acc,p)=>acc*60+p,0);
  },0);
  const covered=mod.topics.filter((_,i)=>{
-  const id=mod.id[1]+'.'+(i+1), matches=mod.lectures.filter(l=>l.topicIds.includes(id));
+  const id=mod.number+'.'+(i+1), matches=mod.lectures.filter(l=>l.topicIds.includes(id));
   return matches.length&&matches.every(l=>record[key(l,'done')]);
  }).length;
- return {remaining,unknown,covered,minutes:Math.ceil(seconds/60/(record[speedKey(mod.id)]||1)),done:mod.lectures.length-remaining.length};
+ return {remaining,unknown,covered,seconds,minutes:Math.ceil(seconds/60/(record[speedKey(mod.id)]||1)),done:mod.lectures.length-remaining.length};
 }
 function playbackStart(l:Lecture,position:number){
  const start=l.startSeconds??0,end=l.endSeconds??Infinity;

@@ -377,3 +377,42 @@ body.sidebarExpanded{--sidebar-size:calc(var(--rail-open) + var(--rail-inset))}
  .setting{flex-wrap:wrap}
  .quizActions button{min-width:0}
 }
+
+/* Subject overview, revision notes, and recall decks share the planner palette. */
+#studyWorkspace [hidden]{display:none!important}
+.quizzing .subjectChooser:not([hidden]){display:flex}
+.subjectOverview{padding:clamp(12px,2vw,20px);margin:16px 0}
+.subjectOverview h2,.recallDeck h3{font-size:1.1rem;line-height:1.35}
+.subjectOverview .info{padding:0;margin:10px 0 5px}
+.subjectSummaryGrid,.recallGrid,.conceptGrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.subjectSummaryGrid{grid-template-columns:repeat(4,minmax(0,1fr));margin-top:10px}
+.subjectSummaryGrid>div{padding:7px 0;min-width:0}
+.subjectSummaryGrid strong,.subjectSummaryGrid small{display:block}
+.subjectSummaryGrid small,.recallDeck small,.conceptLabel small{color:var(--muted)}
+.subjectSummaryGrid strong{font-size:clamp(1rem,2.4vw,1.3rem)}
+.recallDeck,.conceptCard{padding:15px;margin:0;min-width:0}
+.recallDeck h3,.conceptCard p,.recallDeck p{padding:0;margin:6px 0}
+.recallDeck p{font-size:.9rem;color:var(--muted)}
+.recallDeck .bar{margin:9px 0 12px}
+.recallDeck button{margin:2px 4px 2px 0}
+.conceptLabel{display:flex;gap:12px;align-items:center;cursor:pointer}
+.conceptLabel span{display:grid;gap:2px}
+.conceptLabel input{appearance:none;flex:none;width:21px;height:21px;border:1px solid var(--green);border-radius:6px;display:grid;place-content:center;cursor:pointer;transition:background-color .16s ease}
+.conceptLabel input::after{content:"";width:9px;height:5px;border:solid var(--surface);border-width:0 0 2px 2px;transform:rotate(-45deg) scale(0);transition:transform .16s ease}
+.conceptLabel input:checked{background:var(--green)}
+.conceptLabel input:checked::after{transform:rotate(-45deg) scale(1)}
+.conceptCard ul,.missingList{margin:10px 0;padding-inline-start:22px}
+.conceptCard li{margin:3px 0}
+.compilerExtra{padding:12px;margin-top:20px}
+.compilerExtra summary{cursor:pointer;font-weight:650}
+.compilerExtra .conceptGrid{margin-top:12px}
+.recallFace{display:grid;gap:12px;width:100%;padding:clamp(14px,3vw,24px);border-color:var(--line);background:var(--surface);text-align:left;font-weight:650;margin:12px 0;touch-action:pan-y}
+.recallFace span{overflow-wrap:anywhere}
+.recallFace small{color:var(--muted)}
+.recallFace.flipped{border-color:var(--green);animation:recall-reveal .18s ease-out}
+@keyframes recall-reveal{from{transform:perspective(500px) rotateX(-9deg);opacity:.65}to{transform:none;opacity:1}}
+@media(max-width:650px){.subjectSummaryGrid{grid-template-columns:repeat(2,minmax(0,1fr))}.recallGrid,.conceptGrid{grid-template-columns:minmax(0,1fr)}}
+@media(prefers-reduced-motion:reduce){.recallFace,.conceptLabel input,.conceptLabel input::after{transition:none;animation:none}}
+.summarySpeed{display:inline-flex;align-items:center;gap:5px;margin:5px 10px 5px 0;font-size:.9rem;color:var(--muted)}
+.summarySpeed select{min-height:38px;padding:4px 8px}
+.quizzing .overviewSummary{display:none}

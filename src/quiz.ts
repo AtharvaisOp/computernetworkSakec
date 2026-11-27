@@ -3,7 +3,7 @@ const quizTopics:Record<string,string>={
  '3.1':'Packet delivery','3.2':'Delivery modes','3.3':'Classful IPv4','3.4':'CIDR','3.5':'Subnet design','3.6':'NAT','3.7':'IPv6','3.8':'Shortest paths','3.9':'Link state','3.10':'Distance vector','3.11':'Network protocols','3.12':'Congestion',
  '4.1':'Transport services','4.2':'UDP and TCP','4.3':'Connection management','4.4':'TCP timers','4.5':'DNS','4.6':'HTTP and email','4.7':'Telnet and FTP'
 };
-let quizModule:ModuleId=location.hash.endsWith('/m4')?'m4':'m3';
+let quizModule:NetworkModuleId=location.hash.endsWith('/m4')?'m4':'m3';
 let playingQuiz=/^#flashcards\/m[34]$/.test(location.hash);
 const cardsById=new Map(quizCards.map(c=>[c.id,c]));
 function shuffled<T>(items:readonly T[]) {
@@ -11,7 +11,7 @@ function shuffled<T>(items:readonly T[]) {
  for(let i=result.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[result[i],result[j]]=[result[j],result[i]]}
  return result;
 }
-function deckCards(mod:ModuleId){return quizCards.filter(c=>c.id.startsWith(mod+'-'))}
+function deckCards(mod:NetworkModuleId){return quizCards.filter(c=>c.id.startsWith(mod+'-'))}
 function newRound(cards:QuizCard[]):QuizRound {
  return {index:0,answers:[],cards:cards.map(c=>({id:c.id,order:shuffled([0,1,2]).join('') as ChoiceOrder}))};
 }
@@ -89,7 +89,8 @@ document.addEventListener('click',e=>{
  const b=eventElement(e)?.closest<HTMLButtonElement>('button[data-quiz],button[data-answer]');if(!b||b.disabled)return;
  if(b.hasAttribute('data-answer')){answerQuiz(Number(b.dataset.answer));return}
  const action=b.dataset.quiz;if(!action)return;
- if(quizModules.includes(action as ModuleId)){quizModule=action as ModuleId;gotoQuiz(false);document.querySelector<HTMLElement>('[data-quiz="'+action+'"]')?.focus({preventScroll:true})}
+ if(quizModules.includes(action as NetworkModuleId)){quizModule=action as NetworkModuleId;gotoQuiz(false);document.querySelector<HTMLElement>('[data-quiz="'+action+'"]')?.focus({preventScroll:true})}
+ else if(action==='recall'){legacyQuizView=false;playingQuiz=false;openPage('Flashcards')}
  else if(action==='home'||action==='resume')gotoQuiz(action==='resume');
  else if(action==='next')advanceQuiz();
  else if(['quick','full','missed'].includes(action))startQuiz(action);

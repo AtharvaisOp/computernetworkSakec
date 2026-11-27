@@ -116,16 +116,56 @@ window.addEventListener('focus', () => { if (!$('dialog').open)
     flush(); });
 const roadmapHash = () => location.hash.startsWith('#computer-networks') || location.hash.startsWith('#lectures/');
 let page = location.hash.startsWith('#flashcards') ? 'Flashcards' : roadmapHash() ? 'Lecture roadmap' : 'Exam planner';
-const studySubjects = [{ key: 'cn', label: 'CN', modules: ['m3', 'm4'], preparationOrder: [[3, 'Network Layer'], [4, 'Transport Layer'], [2, 'Data Link Layer'], [1, 'Intro to Networking']] }, ...examSchedule.filter(e => e.code !== 'C.N.').map(e => ({ key: e.code.toLowerCase().replace(/[^a-z]/g, ''), label: e.label, modules: [] }))];
-let activeModule = location.hash.endsWith('/m4') ? 'm4' : 'm3';
-let activeSubject = studySubjects.find(s => s.key === location.hash.split('/')[1])?.key || 'cn';
-let filter = 'All', query = '', collapsed = new Set(), roadmapManuallyChanged = false;
+const studySubjects = [
+    { key: 'cn', label: 'Computer Networks', modules: ['m3', 'm4'], preparationOrder: [[3, 'Network Layer'], [4, 'Transport Layer'], [2, 'Data Link Layer'], [1, 'Intro to Networking']] },
+    { key: 'cd', label: 'Compiler Design', modules: ['cd-m2', 'cd-m4', 'cd-m1', 'cd-m3'], preparationOrder: [[2, 'Bottom Up Parsing'], [4, 'Code Generation'], [1, 'Compiler Basics and Top Down Parsing'], [3, 'Intermediate Code Generation']] },
+    ...examSchedule.filter(e => !['C.N.', 'C.D.'].includes(e.code)).map(e => ({ key: e.code.toLowerCase().replace(/[^a-z]/g, ''), label: e.label, modules: [] }))
+];
+const subjectFor = (id) => studySubjects.find(s => s.key === id);
+const hashParts = location.hash.split('/');
+let activeSubject = location.hash.startsWith('#computer-networks') || /^#flashcards\/m[34]$/.test(location.hash) ? 'cn' :
+    subjectFor(hashParts[1])?.key ?? subjectFor(state.lastSubject)?.key ?? 'cn';
+let activeModule = hashParts[0] === '#computer-networks' && hashParts[1] === 'm4' ? 'm4' :
+    subjectFor(activeSubject)?.modules.find(m => m === hashParts[2]) ?? subjectFor(activeSubject)?.modules[0] ?? 'm3';
+function selectStudySubject(id) {
+    const subject = subjectFor(id);
+    if (!subject)
+        return;
+    if (id !== activeSubject) {
+        activeSubject = id;
+        activeModule = subject.modules[0] ?? 'm3';
+    }
+    if (state.lastSubject !== id)
+        void changed({ lastSubject: id });
+    if (id === 'cn' && (activeModule === 'm3' || activeModule === 'm4'))
+        quizModule = activeModule;
+    playingQuiz = false;
+}
+function jumpToRequirement(req) {
+    selectStudySubject(studyModules[req.module].subjectId);
+    activeModule = req.module;
+    openPage('Lecture roadmap');
+    const lecture = currentStudy().lectures.find(l => l.uid === req.ref);
+    if (lecture) {
+        const section = currentStudy().sections.find(s => s.rows.includes(lecture));
+        if (section) {
+            collapsed.delete(section.name);
+            roadmapManuallyChanged = true;
+            render();
+        }
+    }
+    const el = [...document.querySelectorAll('[data-concept], [data-done]')].find(n => n.dataset.concept === req.ref || n.dataset.done === req.ref);
+    el?.scrollIntoView({ block: 'center' });
+    el?.focus({ preventScroll: true });
+}
+let filter = 'All', query = '', collapsed = new Set(), roadmapManuallyChanged = false, conceptDetailsOpen = false;
 const currentStudy = () => studyModules[activeModule];
 const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 function resetRoadmap() {
     roadmapManuallyChanged = false;
     filter = 'All';
     query = '';
+    conceptDetailsOpen = false;
 }
 function animateStudyView() {
     if (prefersReducedMotion.matches)
@@ -250,8 +290,10 @@ function openPage(nextPage, moveFocus = false) {
     if (nextPage === 'Lecture roadmap')
         resetRoadmap();
     page = nextPage;
-    const hash = page === 'Flashcards' ? '#flashcards' + (playingQuiz ? '/' + quizModule : '') : page === 'Exam planner' ? '' : page === 'Lecture roadmap' && activeSubject !== 'cn' ? '#lectures/' + activeSubject : '#computer-networks' + (activeModule === 'm4' ? '/m4' : '');
+    const hash = page === 'Flashcards' ? '#flashcards/' + activeSubject + (activeSubject === 'cd' ? '/' + activeModule : '') : page === 'Exam planner' ? '' : activeSubject === 'cn' ?
+        '#computer-networks' + (activeModule === 'm4' ? '/m4' : '') : '#lectures/' + activeSubject + (studyModules[activeModule].subjectId === activeSubject ? '/' + activeModule : '');
     history.replaceState(null, '', location.pathname + location.search + hash);
+    accountLink.href = (account ? '/signout-with-chatgpt' : '/signin-with-chatgpt') + '?return_to=' + encodeURIComponent(location.pathname + location.search + hash);
     render();
     window.scrollTo(0, 0);
     if (from)
@@ -270,33 +312,36 @@ $('nav').onclick = e => {
     const b = eventElement(e)?.closest('button');
     if (b) {
         if (b.dataset.page === 'Flashcards') {
-            quizModule = activeModule;
+            legacyQuizView = false;
+            if (activeModule === 'm3' || activeModule === 'm4')
+                quizModule = activeModule;
             playingQuiz = false;
+            recallStudying = false;
         }
-        if (b.dataset.page === 'Numerical practice')
-            activeSubject = 'cn';
         openPage(b.dataset.page, true);
     }
 };
 const subjectSelect = $('subjectSelect');
 subjectSelect.innerHTML = studySubjects.map(s => '<option value="' + s.key + '">' + esc(s.label) + '</option>').join('');
-subjectSelect.onchange = () => { activeSubject = subjectSelect.value; openPage('Lecture roadmap'); subjectSelect.focus({ preventScroll: true }); };
+subjectSelect.onchange = () => { selectStudySubject(subjectSelect.value); recallStudying = false; openPage(page === 'Flashcards' ? 'Flashcards' : 'Lecture roadmap'); subjectSelect.focus({ preventScroll: true }); };
 $('moduleSwitch').onclick = e => {
     const button = eventElement(e)?.closest('button[data-module]');
     if (!button || button.dataset.module === activeModule)
         return;
-    activeSubject = 'cn';
-    activeModule = button.dataset.module;
+    const mod = subjectFor(activeSubject)?.modules.find(m => m === button.dataset.module);
+    if (!mod)
+        return;
+    activeModule = mod;
     resetRoadmap();
     openPage(page);
-    button.focus({ preventScroll: true });
+    $('moduleSwitch').querySelector('[data-module="' + mod + '"]')?.focus({ preventScroll: true });
 };
 const studyButton = mustQuery('[data-open-study]');
 studyButton.onclick = (() => {
     const subject = studySubjects.find(s => s.key === studyButton.dataset.subject);
     if (!subject)
         return;
-    activeSubject = subject.key;
+    selectStudySubject(subject.key);
     openPage('Lecture roadmap');
     const heading = subject.modules.length ? $('moduleTitle') : $('panel').querySelector('h2');
     if (heading) {
@@ -314,7 +359,8 @@ const studyTimer = mountStudyTimer($('studyTimer'), () => selectedDeadline);
 $('studyTimerExam').onclick = () => { openPage('Exam planner'); const heading = $('examHeading'); heading.tabIndex = -1; heading.focus({ preventScroll: true }); };
 function syncStudyTimer() {
     const round = state[roundKey(quizModule)];
-    const activeTest = page === 'Flashcards' && playingQuiz && round && round.index < round.cards.length;
+    const recall = state[recallSessionKey(activeSubject === 'cd' ? 'cd' : 'cn')];
+    const activeTest = page === 'Flashcards' && ((playingQuiz && round && round.index < round.cards.length) || (recallStudying && recall && recall.index < recall.cards.length));
     $('studyTimer').hidden = page === 'Exam planner' || !!activeTest;
     studyTimer.update();
 }
@@ -335,26 +381,42 @@ function render() {
         examPlannerView.update();
         return;
     }
+    const subject = subjectFor(activeSubject) ?? studySubjects[0];
+    const study = currentStudy(), moduleSpeed = speedKey(study.id), lectures = study.lectures;
+    const emptySubject = !subject.modules.length;
+    $('subjectChooser').hidden = false;
+    subjectSelect.value = activeSubject;
+    $('subjectStats').hidden = page !== 'Lecture roadmap' || emptySubject;
+    if (page === 'Lecture roadmap' && !emptySubject)
+        renderSubjectSummary(subject);
     if (page === 'Flashcards') {
         $('studyWorkspace').classList.remove('emptySubject');
-        renderQuiz();
+        if (emptySubject) {
+            $('panel').innerHTML = '<h2>Flashcards</h2><p class="empty">No flashcards have been added for this subject yet.</p>';
+            return;
+        }
+        if (activeSubject === 'cn' && legacyQuizView) {
+            renderQuiz();
+            return;
+        }
+        renderRecall(activeSubject === 'cd' ? 'cd' : 'cn');
         return;
     }
-    const subject = studySubjects.find(s => s.key === activeSubject) ?? studySubjects[0];
-    const study = currentStudy(), moduleSpeed = speedKey(study.id), lectures = study.lectures;
-    const emptySubject = page === 'Lecture roadmap' && !subject.modules.length;
     $('moduleSwitch').hidden = emptySubject;
-    $('subjectChooser').hidden = page !== 'Lecture roadmap';
-    subjectSelect.value = activeSubject;
+    const switchHTML = '<span>' + esc(subject.label) + '</span>' + subject.modules.map(id => '<button type="button" data-module="' + id + '">' + String(studyModules[id].number).padStart(2, '0') + ' · ' + esc(studyModules[id].name) + '</button>').join('');
+    if ($('moduleSwitch').dataset.subject !== subject.key) {
+        $('moduleSwitch').innerHTML = switchHTML;
+        $('moduleSwitch').dataset.subject = subject.key;
+    }
     $('studyWorkspace').classList.toggle('emptySubject', emptySubject);
     if (emptySubject) {
         $('panel').innerHTML = '<div class="panelHead"><h2>' + esc(subject.label) + '</h2></div><p class="empty">No lecture resources have been added for this subject yet.</p>';
         return;
     }
     document.querySelectorAll('[data-module]').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.module === study.id)));
-    $('moduleEyebrow').innerHTML = '<span class="tick"></span> MODULE 0' + study.id[1] + ' · ' + study.weight + ' estimated';
+    $('moduleEyebrow').innerHTML = '<span class="tick"></span> MODULE 0' + study.number + ' · ' + study.weight + ' estimated';
     $('moduleTitle').textContent = study.name;
-    $('moduleDescription').textContent = lectures.length + ' lectures · ' + study.sections.length + ' sections · ' + study.marks + ' of 60 marks (estimated)';
+    $('moduleDescription').textContent = (study.revisionOnly ? 'Checklist, notes and flashcards · ' : lectures.length + ' lectures · ' + study.sections.length + ' sections · ') + study.marks + ' of 60 marks (estimated)';
     const masteryButton = mustQuery('[data-page="Numerical practice"]', $('nav'));
     mustQuery('.railLabel', masteryButton).textContent = study.practiceLabel;
     masteryButton.title = study.practiceLabel;
@@ -363,17 +425,27 @@ function render() {
         const initial = initialLectureSection(study, state);
         collapsed = new Set(study.sections.filter(s => s.name !== initial).map(s => s.name));
     }
-    const { remaining, done, covered, minutes } = viewingSummary(study, state);
+    const { remaining, done, covered, minutes, unknown } = viewingSummary(study, state);
+    const isRevision = Boolean(study.revisionOnly);
+    mustQuery('.hero').hidden = isRevision;
+    if (isRevision) {
+        const topics = revisionConcepts(study), completed = topics.filter(c => state[conceptKey(c.id)]).length;
+        $('stats').innerHTML = '<div class="stat progressStat"><div class="statHead">Revision progress</div>' + progressRing(study.id, completed, topics.length) + '</div><div class="stat"><div class="statHead">Concepts checked</div><strong>' + completed + ' / ' + topics.length + '</strong></div>';
+        $('overviewSummary').textContent = 'Mid-semester revision · no full lecture playlist';
+        animateProgressRing();
+        renderPanel();
+        return;
+    }
     const next = nextLecture(lectures, state, state[`${study.id}/lastActive`]);
     $('nextTitle').textContent = next ? next.title : 'Roadmap completed';
-    $('nextMeta').textContent = next ? 'Lecture ' + String(next.n).padStart(2, '0') + ' · ' + next.educator + ' · ' + lectureDuration(next) : 'All ' + lectures.length + ' lectures watched';
+    $('nextMeta').textContent = next ? 'Lecture ' + String(next.n).padStart(2, '0') + ' · ' + next.educator + ' · ' + lectureDuration(next) : 'All ' + lectures.length + ' lectures completed';
     $('resume').style.display = next ? 'inline-flex' : 'none';
     if (next)
         $('resume').href = link(next);
     updateThumbnail(next);
     $('resume').dataset.watch = $('previewLink').dataset.watch = next?.uid || '';
-    $('overviewSummary').textContent = covered + ' / ' + study.topics.length + ' syllabus topics complete · ' + study.practice.filter(p => state[pk(p, study.id)] === 'Mastered').length + ' / ' + study.practice.length + ' ' + study.masteryLabel + ' mastered';
-    $('stats').innerHTML = '<div class="stat progressStat"><div class="statHead">' + icon('chart') + 'Overall progress</div>' + progressRing(study.id, done, lectures.length) + '</div><div class="stat"><div class="statHead">' + icon('check') + 'Lectures completed</div><strong>' + done + ' <span class="count">/ ' + lectures.length + '</span></strong><small>' + remaining.length + ' remaining</small></div><div class="stat"><div class="statHead">' + icon('clock') + 'Viewing time <select aria-label="Playback speed" id="speed">' + options(speeds, state[moduleSpeed], '×') + '</select></div><strong>' + Math.floor(minutes / 60) + 'h ' + minutes % 60 + 'm</strong><small>Remaining at selected speed</small></div>';
+    $('overviewSummary').textContent = covered + ' / ' + study.topics.length + ' syllabus topics complete · ' + (study.subjectId === 'cd' ? revisionConcepts(study).filter(c => state[conceptKey(c.id)]).length : study.practice.filter(p => state[pk(p, study.id)] === 'Mastered').length) + ' / ' + (study.subjectId === 'cd' ? revisionConcepts(study).length : study.practice.length) + ' ' + study.masteryLabel + ' mastered';
+    $('stats').innerHTML = '<div class="stat progressStat"><div class="statHead">' + icon('chart') + 'Overall progress</div>' + progressRing(study.id, done, lectures.length) + '</div><div class="stat"><div class="statHead">' + icon('check') + 'Lectures completed</div><strong>' + done + ' <span class="count">/ ' + lectures.length + '</span></strong><small>' + remaining.length + ' remaining</small></div><div class="stat"><div class="statHead">' + icon('clock') + 'Viewing time <select aria-label="Playback speed" id="speed">' + options(speeds, state[moduleSpeed], '×') + '</select></div><strong>' + Math.floor(minutes / 60) + 'h ' + minutes % 60 + 'm</strong><small>Remaining at selected speed' + (study.subjectId === 'cd' && unknown ? ' · ' + unknown + ' unknown' : '') + '</small></div>';
     animateProgressRing();
     $('speed').onchange = e => { changed(patchValue(moduleSpeed, Number(inputValue(e)))); render(); };
     renderPanel();
@@ -430,48 +502,88 @@ function topicDetail(id, matched) {
 function renderPanel() {
     const study = currentStudy(), { topics, practice, stages, lectures } = study;
     let html = '<div class="panelHead"><h2>' + (page === 'Numerical practice' ? study.practiceLabel : page) + '</h2></div>';
+    if (study.subjectId === 'cd' && (page === 'Numerical practice' || page === 'Syllabus coverage' || (page === 'Lecture roadmap' && study.revisionOnly))) {
+        $('panel').innerHTML = '<div class="panelHead"><h2>' + (page === 'Lecture roadmap' ? 'Revision checklist' : page === 'Numerical practice' ? 'Concept checklist' : 'Syllabus and revision notes') + '</h2></div>' + compilerConceptPanel(study);
+        return;
+    }
+    if (study.subjectId === 'cd' && page === 'Study priorities') {
+        $('panel').innerHTML = html + '<div class="block"><h3>Estimated preparation priority</h3><p>M2 and M4 cover new content (42 of 60 marks). M1 and M3 cover mid-semester revision (18 of 60 marks). Individual marks are estimates, not official paper weightage.</p>' +
+            (subjectFor('cd')?.modules ?? []).map(id => { const m = studyModules[id]; return '<div class="setting"><span>M' + m.number + ' · ' + esc(m.name) + '</span><strong>' + m.marks + ' marks · ' + [8, 8, 7, 7][m.number - 1] + ' hours</strong></div>'; }).join('') + '</div>';
+        return;
+    }
     if (page === 'Lecture roadmap') {
-        html += '<div class="tools"><div class="chips">' + ['All', 'Incomplete', 'Completed', 'Revision'].map(f => '<button data-filter="' + f + '" aria-pressed="' + (f === filter) + '" class="' + (f === filter ? 'active' : '') + '">' + f + '</button>').join('') + '</div><label class="search">' + icon('find') + '<input aria-label="Search lectures" id="search" placeholder="Search lectures…" value="' + esc(query) + '"></label></div><div id="groups">' + groups() + '</div>';
+        html += '<div class="tools"><div class="chips">' + ['All', 'Incomplete', 'Completed', 'Revision'].map(f => '<button data-filter="' + f + '" aria-pressed="' + (f === filter) + '" class="' + (f === filter ? 'active' : '') + '">' + f + '</button>').join('') + '</div><label class="search">' + icon('find') + '<input aria-label="Search lectures" id="search" placeholder="Search lectures…" value="' + esc(query) + '"></label></div><div id="groups">' + groups() + '</div>' + (study.subjectId === 'cd' ? '<details class="block compilerExtra"' + (conceptDetailsOpen ? ' open' : '') + '><summary>Concise topic notes and concept checklist</summary>' + compilerConceptPanel(study) + '</details>' : '');
     }
     if (page === 'Syllabus coverage')
-        html += '<p class="info">Coverage follows lectures marked complete. Track mastery independently in ' + study.practiceLabel + '.</p><div class="block">' + topics.map((t, i) => { let sy = study.id[1] + '.' + (i + 1), ls = lectures.filter(l => topicMatch(l, sy)), n = ls.filter(l => get(l, 'done')).length; return '<div class="setting"><span><b>' + sy + '</b> ' + esc(t) + '</span><small>' + n + '/' + ls.length + ' · ' + (n === 0 ? 'Not started' : n === ls.length ? 'Completed' : 'In progress') + '</small></div>' + topicDetail(sy, ls); }).join('') + '</div>';
+        html += '<p class="info">Coverage follows lectures marked complete. Track mastery independently in ' + study.practiceLabel + '.</p><div class="block">' + topics.map((t, i) => { let sy = study.number + '.' + (i + 1), ls = lectures.filter(l => topicMatch(l, sy)), n = ls.filter(l => get(l, 'done')).length; return '<div class="setting"><span><b>' + sy + '</b> ' + esc(t) + '</span><small>' + n + '/' + ls.length + ' · ' + (n === 0 ? 'Not started' : n === ls.length ? 'Completed' : 'In progress') + '</small></div>' + topicDetail(sy, ls); }).join('') + '</div>';
     if (page === 'Numerical practice')
         html += '<p class="info">' + (study.id === 'm4' ? 'Track what you can explain or apply without your notes.' : 'Update each skill after solving problems independently.') + '</p><div class="block">' + practice.map(p => '<label class="setting">' + esc(p) + '<select data-practice="' + pk(p, study.id) + '">' + options(stages, state[pk(p, study.id)]) + '</select></label>').join('') + '</div>';
     if (page === 'Study priorities')
         html += (study.id === 'm3' ? '<div class="block"><h3>Recommended study effort</h3>' + ['IPv4, CIDR, subnetting and supernetting', 'Routing algorithms', 'NAT, IPv6 and network protocols', 'Fundamentals and congestion control'].map((t, i) => '<div class="setting">' + t + '<b>' + [40, 30, 20, 10][i] + '%</b></div>').join('') + '</div>' : '') + '<div class="block"><h3>Estimated exam weight · 60 marks</h3>' + ['03 · Network Layer', '04 · Transport Layer', '02 · Data Link Layer', '01 · Introduction to Networking'].map((t, i) => '<div class="setting">' + t + '<span>' + ['22.4 marks · 37.33%', '19.6 marks · 32.67%', '9.6 marks · 16%', '8.4 marks · 14%'][i] + '</span></div>').join('') + '</div>';
     $('panel').innerHTML = html;
+    const extra = $('panel').querySelector('.compilerExtra');
+    if (extra)
+        extra.ontoggle = () => { if (extra.isConnected)
+            conceptDetailsOpen = extra.open; };
     if (document.getElementById('search'))
         $('search').oninput = e => { query = inputValue(e); roadmapManuallyChanged = true; collapsed.clear(); $('groups').innerHTML = groups(); };
 }
-$('panel').onclick = e => { const b = eventElement(e)?.closest('button,input'); if (!b)
-    return; const d = b.dataset, { sections, lectures } = currentStudy(); if (page === 'Lecture roadmap')
-    roadmapManuallyChanged = true; if (d.filter) {
-    filter = d.filter;
-    collapsed.clear();
-}
-else if (d.section !== undefined) {
-    const name = sections[+d.section].name;
-    collapsed.has(name) ? collapsed.delete(name) : collapsed.add(name);
-}
-else if (d.done || d.revision) {
-    const l = lectures.find(l => l.uid === (d.done || d.revision));
-    if (!l)
+$('panel').onclick = e => {
+    const b = eventElement(e)?.closest('button,input');
+    if (!b)
         return;
-    const k = key(l, d.done ? 'done' : 'revision');
-    changed(patchValue(k, !state[k]));
-}
-else if (d.note) {
-    const lecture = lectures.find(l => l.uid === d.note);
-    if (lecture)
-        note(lecture);
-    return;
-}
-else
-    return; render(); if (d.done)
-    document.querySelector('[data-done="' + d.done + '"]')?.closest('.row')?.classList.add('toggled'); if (b.dataset.done || b.dataset.revision || b.dataset.section !== undefined || d.filter) {
-    const attr = Object.keys(d)[0];
-    (attr ? document.querySelector('[data-' + attr + '="' + d[attr] + '"]') : null)?.focus({ preventScroll: true });
-} };
+    const d = b.dataset;
+    if (d.concept && b instanceof HTMLInputElement) {
+        const k = conceptKey(d.concept);
+        if (Object.hasOwn(defaults, k)) {
+            const before = availableDecks('cd');
+            void changed(patchValue(k, b.checked));
+            announceNewDecks(before, 'cd');
+            render();
+            [...document.querySelectorAll('[data-concept]')].find(el => el.dataset.concept === d.concept)?.focus({ preventScroll: true });
+        }
+        return;
+    }
+    if (d.conceptNote) {
+        openConceptNote(d.conceptNote);
+        return;
+    }
+    const { sections, lectures } = currentStudy();
+    if (page === 'Lecture roadmap')
+        roadmapManuallyChanged = true;
+    if (d.filter) {
+        filter = d.filter;
+        collapsed.clear();
+    }
+    else if (d.section !== undefined) {
+        const name = sections[+d.section].name;
+        collapsed.has(name) ? collapsed.delete(name) : collapsed.add(name);
+    }
+    else if (d.done || d.revision) {
+        const l = lectures.find(l => l.uid === (d.done || d.revision));
+        if (!l)
+            return;
+        const k = key(l, d.done ? 'done' : 'revision');
+        const sub = currentStudy().subjectId, before = availableDecks(sub);
+        changed(patchValue(k, !state[k]));
+        announceNewDecks(before, sub);
+    }
+    else if (d.note) {
+        const lecture = lectures.find(l => l.uid === d.note);
+        if (lecture)
+            note(lecture);
+        return;
+    }
+    else
+        return;
+    render();
+    if (d.done)
+        document.querySelector('[data-done="' + d.done + '"]')?.closest('.row')?.classList.add('toggled');
+    if (b.dataset.done || b.dataset.revision || b.dataset.section !== undefined || d.filter) {
+        const attr = Object.keys(d)[0];
+        (attr ? document.querySelector('[data-' + attr + '="' + d[attr] + '"]') : null)?.focus({ preventScroll: true });
+    }
+};
 $('panel').onchange = e => { const select = eventElement(e); if (select instanceof HTMLSelectElement && select.dataset.practice)
     changed(patchValue(select.dataset.practice, select.value)); };
 function modal(html) { $('dialogBody').innerHTML = html; $('dialog').showModal(); }

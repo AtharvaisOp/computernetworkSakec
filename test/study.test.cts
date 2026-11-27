@@ -6,7 +6,7 @@ import {test} from 'node:test';
 const vm = require('node:vm');
 
 const root = path.join(__dirname, '../..');
-const scripts = ['data.js', 'm4-data.js', 'schema.js', 'quiz-schema.js', 'cards.js'];
+const scripts = ['data.js', 'm4-data.js', 'compiler-content.js','compiler-lectures.js','compiler.js','schema.js','recall-model.js', 'quiz-schema.js', 'cards.js'];
 const study = vm.createContext({});
 for (const name of scripts) {
   vm.runInContext(readFileSync(path.join(root, '.build/src', name), 'utf8'), study, {filename: name});

@@ -1,8 +1,8 @@
-const quizModules:ModuleId[] = ['m3','m4'];
+const quizModules:NetworkModuleId[] = ['m3','m4'];
 const cardPattern = /^m[34]-(0[1-9]|[1-4][0-9]|50)$/;
-const roundKey = (mod:ModuleId) => `quiz/${mod}/round` as const;
+const roundKey = (mod:NetworkModuleId) => `quiz/${mod}/round` as const;
 const markKey = (id:string) => `quiz/card/${id}` as const;
-const trackKey = (mod:ModuleId) => `quiz/${mod}/history` as const;
+const trackKey = (mod:NetworkModuleId) => `quiz/${mod}/history` as const;
 const whole = (value:unknown):value is number => typeof value==='number' && Number.isSafeInteger(value) && value>=0;
 function isRound(input:unknown,mod:string,strict:boolean) {
  const value=input as Partial<QuizRound>|null;

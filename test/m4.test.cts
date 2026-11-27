@@ -6,7 +6,7 @@ const path=require('node:path');
 const vm=require('node:vm');
 const root=path.join(__dirname,'../..');
 const ctx=vm.createContext({URL,URLSearchParams});
-for(const f of ['data.js','m4-data.js','schema.js','quiz-schema.js','cards.js','m4-notes.js']){
+for(const f of ['data.js','m4-data.js','compiler-content.js','compiler-lectures.js','compiler.js','schema.js','recall-model.js','quiz-schema.js','cards.js','m4-notes.js']){
  vm.runInContext(readFileSync(path.join(root,'.build/src',f),'utf8'),ctx,{filename:f});
 }
 const read=(s:string)=>vm.runInContext(s,ctx);

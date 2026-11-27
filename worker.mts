@@ -76,6 +76,8 @@ export default {async fetch(request:Request,env:Environment):Promise<Response>{
   if(body.status)return reply({},body.status);
   const delta=migrate(body.data);
   if(!valid(delta,true))return reply({},400);
+  for(const [key,value] of Object.entries(delta))if(key.startsWith('recall/')&&key.includes('/card/')&&value&&typeof value==='object'&&'userId' in value)
+   value.userId=encodeURIComponent(user);
   for(let i=0;i<5;i++){
    const obj=await env.BUCKET.get(objectKey);
    const prior=migrate(obj?await obj.json():{});
