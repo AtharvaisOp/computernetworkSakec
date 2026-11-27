@@ -52,6 +52,11 @@ function deckRequirements(subject:LearningSubject,deck:RecallDeck,record:Progres
 }
 const requirementsMet=(items:Requirement[])=>items.length>0&&items.every(x=>x.done);
 
+function compilerDeckOverview(mod:StudyModule,record:ProgressPatch){
+ const decks=compilerContent.decks.filter(d=>d.module===mod.number);
+ const size=(items:RecallDeck[])=>new Set(items.flatMap(d=>d.cards.map(c=>c.id))).size;
+ return {total:size(decks),unlocked:size(decks.filter(d=>requirementsMet(deckRequirements('cd',d,record))))};
+}
 // Keep the original keys so existing backups, note completion, and deck eligibility are preserved.
 function revisionReadPatch(id:string,record:ProgressPatch):ProgressPatch|undefined{
  const c=compilerContent.concepts.find(concept=>concept.id===id), key=conceptKey(id);

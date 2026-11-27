@@ -57,6 +57,11 @@ function deckRequirements(subject, deck, record) {
         .map(l => ({ label: l.title, module, ref: l.uid, done: record[key(l, 'done')] === true }));
 }
 const requirementsMet = (items) => items.length > 0 && items.every(x => x.done);
+function compilerDeckOverview(mod, record) {
+    const decks = compilerContent.decks.filter(d => d.module === mod.number);
+    const size = (items) => new Set(items.flatMap(d => d.cards.map(c => c.id))).size;
+    return { total: size(decks), unlocked: size(decks.filter(d => requirementsMet(deckRequirements('cd', d, record)))) };
+}
 // Keep the original keys so existing backups, note completion, and deck eligibility are preserved.
 function revisionReadPatch(id, record) {
     const c = compilerContent.concepts.find(concept => concept.id === id), key = conceptKey(id);

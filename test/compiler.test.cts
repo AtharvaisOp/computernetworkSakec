@@ -168,3 +168,14 @@ test('Module 3 note completions and reviews remain intact when the playlist is a
   valid(migrated,true)&&revisionReadPatch(first,{})[conceptKey(first)]===true;
  })()`));
 });
+
+test('Module 3 overview separates 25 existing flashcards from locked or unlocked study access',()=>{
+ const run=(expression:string)=>plain(read(expression));
+ assert.deepEqual(run("compilerDeckOverview(studyModules['cd-m3'],{})"),{total:25,unlocked:0});
+ assert.deepEqual(run(`(()=>{
+  const mod=studyModules['cd-m3'];
+  const previous=Object.fromEntries(compilerContent.decks.find(d=>d.id==='semantic').requires.map(id=>[conceptKey(id),true]));
+  const lectures=Object.fromEntries(mod.lectures.map(l=>[key(l,'done'),true]));
+  return [compilerDeckOverview(mod,migrate(previous)),compilerDeckOverview(mod,lectures)];
+ })()`),[{total:25,unlocked:12},{total:25,unlocked:25}]);
+});

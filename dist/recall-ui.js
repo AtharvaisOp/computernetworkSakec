@@ -33,6 +33,10 @@ function recallStats(subject) {
         total: all.length
     };
 }
+function compilerFlashcardCount(mod) {
+    const { total, unlocked } = compilerDeckOverview(mod, state);
+    return { total, unlocked, label: total + ' topic flashcards · ' + unlocked + ' unlocked · ' + (total - unlocked) + ' locked' };
+}
 function renderSubjectSummary(subject) {
     const all = subject.modules.map(id => studyModules[id]), key = all[0].subjectId;
     const progress = all.map(m => {
@@ -45,12 +49,14 @@ function renderSubjectSummary(subject) {
     const decks = state[unlockKey(key)].filter(id => unlocked.has(id)).map(id => list.find(d => d.id === id)).filter((d) => Boolean(d));
     const seconds = progress.reduce((sum, r) => sum + r.seconds, 0), unknown = key === 'cd' ? progress.reduce((sum, r) => sum + r.unknown, 0) : 0, speed = state[speedKey(activeModule)];
     const duration = (min) => Math.floor(min / 60) + 'h ' + min % 60 + 'm';
-    const host = $('subjectStats');
+    const host = $('subjectStats'), current = currentStudy();
+    const flashcardCount = key === 'cd' && current.subjectId === 'cd' ? compilerFlashcardCount(current) : null;
     host.innerHTML = '<section class="block subjectOverview"><h2>' + esc(subject.label) + ' overview</h2><div class="subjectSummaryGrid">' +
         '<div><strong>' + progressPercent(done, total) + '%</strong><small>' + (key === 'cd' ? 'Core lecture progress' : 'Preparation progress') + '</small></div>' +
         '<div><strong>' + Number(marks.toFixed(1)) + ' / 60</strong><small>' + (key === 'cd' ? 'Estimated coverage from lectures' : 'Estimated marks coverage') + '</small></div>' +
         '<div><strong>' + duration(Math.ceil(seconds / 60 / speed)) + '</strong><small>Subject video time at ' + speed + '×' + (unknown ? ' · ' + unknown + ' unknown' : '') + '</small></div>' +
         '<div><strong>' + stats.mastered + ' mastered · ' + stats.due.length + ' due</strong><small>Flashcard review</small></div></div>' +
+        (flashcardCount ? '<p class="info">Module ' + current.number + ': ' + flashcardCount.label + '</p>' : '') +
         '<p class="info">Priority: ' + all.map(m => 'M' + m.number).join(', ') + ' · ' + (decks.length ? esc(decks.slice(0, 2).map(d => d.title).join(' · ')) + ' recently unlocked' : unlocked.size ? unlocked.size + ' topic decks available' : 'No topic decks unlocked yet') + '</p>' +
         '<label class="summarySpeed">Playback speed <select data-subject-speed aria-label="Subject viewing speed">' + options(speeds, speed, '×') + '</select></label>' +
         '<button class="quiet" type="button" data-subject-quick>Start Quick 10</button>' +
@@ -111,6 +117,12 @@ function startRecall(subject, title, cards, shuffle = false) {
 function focusRecall(selector) { $('panel').querySelector(selector)?.focus({ preventScroll: true }); }
 function recallHome(subject) {
     const items = recallDecksFor(subject), stats = recallStats(subject), session = state[recallSessionKey(subject)];
+    const mod = currentStudy();
+    const overview = subject === 'cd' && mod.subjectId === 'cd' ? compilerFlashcardCount(mod) : null;
+    const moduleOverview = overview ? '<section class="block"><h3>Module ' + mod.number + ' · ' + esc(mod.name) + '</h3><p><strong>' +
+        overview.label + '</strong></p>' +
+        (overview.unlocked < overview.total ? '<p class="info">' + (mod.id === 'cd-m3' ? 'To unlock a deck, finish its revision notes or mark the matching lectures complete.' : mod.revisionOnly ? 'To unlock a deck, finish its revision notes.' : 'To unlock a deck, mark its required lectures complete.') + '</p>' : '') +
+        '</section>' : '';
     const decks = items.map(d => {
         const rs = deckRequirements(subject, d, state), done = rs.filter(r => r.done).length, enabled = requirementsMet(rs);
         return '<article class="block recallDeck"><small>M' + d.module + ' · ' + d.cards.length + ' cards</small><h3>' + esc(d.title) + '</h3>' + (subject === 'cn' ? '<p>' + done + ' / ' + rs.length + ' prerequisites complete</p>' + bar(done, Math.max(1, rs.length)) : '') +
@@ -122,7 +134,7 @@ function recallHome(subject) {
         (session && session.index < session.cards.length ? recallButton('resume', 'Resume previous session', 'quizPrimary') : '') +
         recallButton('quick', 'Start Quick 10', 'quizPrimary') + recallButton('quickShuffle', 'Shuffle Quick 10') +
         (stats.due.length ? recallButton('due', 'Review due · ' + stats.due.length) : '') + (stats.missed.length ? recallButton('missed', 'Review missed · ' + stats.missed.length) : '') +
-        '</div></article><div class="panelHead"><h2>Topic decks</h2></div><div class="recallGrid">' + decks + '</div>' +
+        '</div></article>' + moduleOverview + '<div class="panelHead"><h2>Topic decks</h2></div><div class="recallGrid">' + decks + '</div>' +
         '<p class="info">' + esc(sync) + '. Reviews are included in your progress backup.</p>' +
         (subject === 'cn' ? recallButton('legacy', 'Classic multiple-choice practice and past results') : '');
 }
