@@ -13,12 +13,12 @@ for(const x of ['data','m4-data','compiler-content','compiler-lectures','compile
 const read=(code:string)=>runInContext(code,ctx);
 const plain=<T,>(x:T):T=>JSON.parse(JSON.stringify(x));
 test('Compiler Design covers the entire syllabus in the intended order without playlist-only revision topics',()=>{
- assert.deepEqual(plain(read("compilerModules.map(id=>studyModules[id].lectures.length)")),[0,13,0,9]);
+ assert.deepEqual(plain(read("compilerModules.map(id=>studyModules[id].lectures.length)")),[0,13,8,9]);
  assert.deepEqual(plain(read("compilerModules.map(id=>studyModules[id].marks)")),[10,22,8,20]);
  assert.deepEqual(plain(read("compilerModules.map(id=>studyModules[id].topics.length)")),[5,2,3,4]);
- assert.deepEqual(plain(read("compilerModules.filter(id=>studyModules[id].revisionOnly)")),['cd-m1','cd-m3']);
+ assert.deepEqual(plain(read("compilerModules.filter(id=>studyModules[id].revisionOnly)")),['cd-m1']);
  assert.equal(read("new Set(compilerContent.concepts.flatMap(c=>c.syllabus.split(','))).size"),14);
- assert.equal(read("new Set(compilerRows.map(l=>l.id)).size"),22);
+ assert.equal(read("new Set(compilerRows.map(l=>l.id)).size"),30);
  assert.equal(read("compilerRows.every(l=>l.durationSeconds===null||Number.isInteger(l.durationSeconds)&&l.durationSeconds>0)"),true);
  assert.equal(read('compilerRows.every(l=>new URL(l.watchUrl).searchParams.get("v")===l.videoId)'),true);
  assert.equal(read('compilerRows.every(l=>l.conceptIds.every(id=>compilerContent.concepts.some(c=>c.id===id)))'),true);
@@ -143,5 +143,28 @@ test('worked examples follow their theory and do not displace completion or unlo
   const summary=viewingSummary(m2,state);
   return summary.coreDone===11&&summary.coreTotal===11&&summary.remaining.length===2&&summary.covered===m2.topics.length&&
    compilerContent.decks.filter(d=>d.module===2).every(d=>requirementsMet(deckRequirements('cd',d,state)));
+ })()`));
+});
+
+test('Module 3 playlist follows the official 3.1 to 3.3 syllabus and saves independent progress',()=>{
+ assert.ok(read(`(()=>{
+ const m=studyModules['cd-m3'], first=m.lectures[0], partial={[key(first,'done')]:true,[key(first,'note')]:'my video note','m3/m3-l01/done':true};
+ if(m.lectures.map(l=>l.sy).join()!=='3.1,3.1,3.2,3.2,3.3,3.3,3.3,3.3'||m.lectures.some((l,i)=>l.n!==i+1))return false;
+ const all=Object.fromEntries(m.lectures.map(l=>[key(l,'done'),true]));
+ return valid(partial,true)&&nextLecture(m.lectures,migrate(partial),'')===m.lectures[1]&&viewingSummary(m,all).covered===3&&
+  !valid({'cd-m3/m3-l01/done':true},true)&&!valid({'m3/cd-m3-l01/done':true},true);
+ })()`));
+});
+test('Module 3 note completions and reviews remain intact when the playlist is added',()=>{
+ assert.ok(read(`(()=>{
+ const m=studyModules['cd-m3'], deck=compilerContent.decks.find(d=>d.module===3), req=s=>requirementsMet(deckRequirements('cd',deck,s));
+ const notes=Object.fromEntries(deck.requires.map(id=>[conceptKey(id),true]));
+ const cid=deck.cards[0].id,k=recallKey('cd',cid);
+ const prior={...notes,[k]:scheduleRecall(null,'Good',1000000000,'guest',cid),[conceptNoteKey(deck.requires[0])]:'my existing note'};
+ const videos=Object.fromEntries(m.lectures.map(l=>[key(l,'done'),true]));
+ const migrated=migrate(prior);
+ const first=deck.requires[0];
+ return !req({})&&req(migrated)&&req(videos)&&migrated[k]===prior[k]&&migrated[conceptNoteKey(first)]==='my existing note'&&
+  valid(migrated,true)&&revisionReadPatch(first,{})[conceptKey(first)]===true;
  })()`));
 });

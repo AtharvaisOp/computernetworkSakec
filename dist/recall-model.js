@@ -37,12 +37,20 @@ for (const concept of compilerContent.concepts) {
     defaults[conceptKey(concept.id)] = false;
     defaults[conceptNoteKey(concept.id)] = '';
 }
+// The M3 playlist augments revision notes. Finishing either path preserves deck access.
+const hasRevisionPrerequisites = (mod) => mod.subjectId === 'cd' && (mod.revisionOnly || mod.id === 'cd-m3');
+function revisionPrerequisiteMet(mod, id, record) {
+    if (record[conceptKey(id)] === true)
+        return true;
+    const matches = mod.lectures.filter(l => !l.workedExample && l.conceptIds?.includes(id));
+    return matches.length > 0 && matches.every(l => record[key(l, 'done')] === true);
+}
 function deckRequirements(subject, deck, record) {
     const module = (subject === 'cn' ? 'm' + deck.module : 'cd-m' + deck.module), mod = studyModules[module];
-    if (subject === 'cd' && mod.revisionOnly) {
+    if (subject === 'cd' && hasRevisionPrerequisites(mod)) {
         return deck.requires.flatMap(id => {
             const topic = compilerContent.concepts.find(c => c.id === id);
-            return topic ? [{ label: topic.title, module, ref: topic.id, done: record[conceptKey(topic.id)] === true }] : [];
+            return topic ? [{ label: topic.title, module, ref: topic.id, done: revisionPrerequisiteMet(mod, topic.id, record) }] : [];
         });
     }
     return mod.lectures.filter(l => deck.requires.includes(l.uid) || (!l.workedExample && [...l.topicIds, ...(l.conceptIds ?? [])].some(id => deck.requires.includes(id))))
@@ -52,7 +60,7 @@ const requirementsMet = (items) => items.length > 0 && items.every(x => x.done);
 // Keep the original keys so existing backups, note completion, and deck eligibility are preserved.
 function revisionReadPatch(id, record) {
     const c = compilerContent.concepts.find(concept => concept.id === id), key = conceptKey(id);
-    if (!c || !studyModules[('cd-m' + c.module)]?.revisionOnly || record[key])
+    if (!c || !hasRevisionPrerequisites(studyModules[('cd-m' + c.module)]) || record[key])
         return;
     const delta = {};
     delta[key] = true;

@@ -35,19 +35,19 @@ function recallStats(subject:LearningSubject){
 function renderSubjectSummary(subject:StudySubject){
  const all=subject.modules.map(id=>studyModules[id]), key=all[0].subjectId;
  const progress=all.map(m=>{const r=viewingSummary(m,state);
-  return {done:r.coreDone,total:r.coreTotal,seconds:r.seconds};
+  return {done:r.coreDone,total:r.coreTotal,seconds:r.seconds,unknown:r.unknown};
  });
  const done=progress.reduce((sum,r)=>sum+r.done,0),total=progress.reduce((sum,r)=>sum+r.total,0);
  const marks=progress.reduce((sum,r,i)=>sum+(r.total?r.done/r.total*all[i].marks:0),0);
  const stats=recallStats(key), unlocked=availableDecks(key), list=recallDecksFor(key);
  const decks=state[unlockKey(key)].filter(id=>unlocked.has(id)).map(id=>list.find(d=>d.id===id)).filter((d):d is RecallDeck=>Boolean(d));
- const seconds=progress.reduce((sum,r)=>sum+r.seconds,0), speed=state[speedKey(activeModule)];
+ const seconds=progress.reduce((sum,r)=>sum+r.seconds,0), unknown=key==='cd'?progress.reduce((sum,r)=>sum+r.unknown,0):0, speed=state[speedKey(activeModule)];
  const duration=(min:number)=>Math.floor(min/60)+'h '+min%60+'m';
  const host=$('subjectStats');
  host.innerHTML='<section class="block subjectOverview"><h2>'+esc(subject.label)+' overview</h2><div class="subjectSummaryGrid">'+
   '<div><strong>'+progressPercent(done,total)+'%</strong><small>'+(key==='cd'?'Core lecture progress':'Preparation progress')+'</small></div>'+
   '<div><strong>'+Number(marks.toFixed(1))+' / 60</strong><small>'+(key==='cd'?'Estimated coverage from lectures':'Estimated marks coverage')+'</small></div>'+
-  '<div><strong>'+duration(Math.ceil(seconds/60/speed))+'</strong><small>Subject video time at '+speed+'×</small></div>'+
+  '<div><strong>'+duration(Math.ceil(seconds/60/speed))+'</strong><small>Subject video time at '+speed+'×'+(unknown?' · '+unknown+' unknown':'')+'</small></div>'+
   '<div><strong>'+stats.mastered+' mastered · '+stats.due.length+' due</strong><small>Flashcard review</small></div></div>'+
   '<p class="info">Priority: '+all.map(m=>'M'+m.number).join(', ')+' · '+(decks.length?esc(decks.slice(0,2).map(d=>d.title).join(' · '))+' recently unlocked':unlocked.size?unlocked.size+' topic decks available':'No topic decks unlocked yet')+'</p>'+
   '<label class="summarySpeed">Playback speed <select data-subject-speed aria-label="Subject viewing speed">'+options(speeds,speed,'×')+'</select></label>'+
@@ -65,7 +65,7 @@ function compilerNotesPanel(study:StudyModule){
 }
 function openRevisionReading(id:string){
  const c=compilerContent.concepts.find(x=>x.id===id);if(!c)return;
- const tracked=studyModules[('cd-m'+c.module) as CompilerModuleId].revisionOnly;
+ const tracked=hasRevisionPrerequisites(studyModules[('cd-m'+c.module) as CompilerModuleId]);
  modal('<p class="eyebrow">'+esc(c.syllabus)+' · REVISION NOTE</p><h2>'+esc(c.title)+'</h2><p>'+esc(c.note)+'</p>'+
   (tracked?'<button type="button" id="doneReading">Done reading</button>':''));
  const done=document.getElementById('doneReading');
@@ -97,7 +97,7 @@ function recallHome(subject:LearningSubject){
  const decks=items.map(d=>{const rs=deckRequirements(subject,d,state), done=rs.filter(r=>r.done).length, enabled=requirementsMet(rs);
   return '<article class="block recallDeck"><small>M'+d.module+' · '+d.cards.length+' cards</small><h3>'+esc(d.title)+'</h3>'+(subject==='cn'?'<p>'+done+' / '+rs.length+' prerequisites complete</p>'+bar(done,Math.max(1,rs.length)):'')+
   (enabled?recallButton('deck:'+d.id,'Study deck','quizPrimary')+recallButton('shuffle:'+d.id,'Shuffle'):
-   recallButton('locked:'+d.id,subject==='cd'?(studyModules[('cd-m'+d.module) as CompilerModuleId].revisionOnly?'Review notes to unlock':'Go to remaining lecture'):'Locked · view prerequisites'))+'</article>';
+   recallButton('locked:'+d.id,subject==='cd'?(hasRevisionPrerequisites(studyModules[('cd-m'+d.module) as CompilerModuleId])?'Review notes to unlock':'Go to remaining lecture'):'Locked · view prerequisites'))+'</article>';
  }).join('');
  return '<div class="eyebrow"><span class="tick"></span> '+esc(subjectFor(subject)?.label??subject)+'</div><h1>Flashcards</h1><p class="sub">Recall an answer before flipping, then rate how well you knew it.</p>'+
   '<article class="quizLaunch"><div><h2>Quick 10</h2><p>Ten high-yield cards, always unlocked.</p><p>'+stats.mastered+' of '+stats.total+' mastered · '+stats.due.length+' due for review</p></div><div class="quizActions">'+
@@ -125,7 +125,7 @@ function showLocked(subject:LearningSubject,deck:RecallDeck){
  const rs=deckRequirements(subject,deck,state), missing=rs.filter(r=>!r.done);
  if(subject==='cd'){
   const next=missing[0];if(!next)return;
-  if(studyModules[next.module].revisionOnly)openRevisionReading(next.ref);
+  if(hasRevisionPrerequisites(studyModules[next.module]))openRevisionReading(next.ref);
   else jumpToRequirement(next);
   return;
  }

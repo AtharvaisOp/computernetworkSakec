@@ -10,6 +10,7 @@ const retiredCompilerLecture:LectureId='cd-m4-l03';
 const retiredCompilerCard='cd-optimization-07';
 const compilerSectionLayout:Record<string,[string,number[]][]>={
  'cd-m2':[['Handles and shift-reduce parsing',[1,2,3]],['Operator precedence',[4,5,6,12]],['LR families and parsing tables',[7,8,9,10,13,11]]],
+ 'cd-m3':[['Semantic analysis and attributes',[1,2]],['SDD evaluation',[3,4]],['Intermediate code and representations',[5,6,7,8]]],
  'cd-m4':[['Code optimization',[1,2,4,5]],['Control flow and liveness',[6,7]],['Generating target code',[8,9,10]]],
 };
 const compilerModuleData=Object.fromEntries(compilerModules.map((id,index)=>{
@@ -25,7 +26,7 @@ const compilerModuleData=Object.fromEntries(compilerModules.map((id,index)=>{
  })}));
  const value:StudyModule={id,name,marks,weight:(100*marks/60).toFixed(2)+'%',sections,topics:[...topics],practice:[],
  practiceLabel:'Revision notes',masteryLabel:'concepts',stages:['Not started','Mastered'],lectures:[],subjectId:'cd',number,
- revisionOnly:number===1||number===3};
+ revisionOnly:number===1};
  return [id,value];
 })) as Record<CompilerModuleId,StudyModule>;
 const revisionConcepts = (mod:StudyModule) => mod.subjectId==='cd'?compilerContent.concepts.filter(c=>c.module===mod.number):[];

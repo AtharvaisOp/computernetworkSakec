@@ -1,6 +1,257 @@
 "use strict";
 const compilerRows = [
     {
+        "id": "cd-m3-l01",
+        "subjectId": "cd",
+        "moduleId": "cd-m3",
+        "syllabusRef": "3.1",
+        "title": "Semantic analysis and syntax-directed translation",
+        "educator": "Gate Smashers",
+        "videoId": "_CloXDbYAAg",
+        "watchUrl": "https://www.youtube.com/watch?v=_CloXDbYAAg",
+        "durationSeconds": 391,
+        "conceptIds": [
+            "cd-semantic"
+        ],
+        "coverage": [
+            "Semantic analysis",
+            "Syntax-directed translation"
+        ],
+        "verificationStatus": "player-duration-observed-playback-unverified",
+        "verificationDate": "2026-11-27",
+        "playback": {
+            "watch": "unverified",
+            "embed": "unverified"
+        },
+        "evidence": {
+            "video": "https://www.youtube.com/watch?v=_CloXDbYAAg",
+            "duration": "https://www.youtube.com/watch?v=_CloXDbYAAg",
+            "coverageSource": "SAKEC AY 2026–27 Semester V Compiler Design MSE syllabus, Module 3",
+            "durationStatus": "duration-shown-by-embedded-youtube-player",
+            "embedAudit": "Player controls and runtime loaded; actual timestamp advancement was not observed."
+        }
+    },
+    {
+        "id": "cd-m3-l02",
+        "subjectId": "cd",
+        "moduleId": "cd-m3",
+        "syllabusRef": "3.1",
+        "title": "Syntax-directed definitions and attribute types",
+        "educator": "Sundeep Saradhi Kanthety",
+        "videoId": "mEvuQkt6Idc",
+        "watchUrl": "https://www.youtube.com/watch?v=mEvuQkt6Idc",
+        "durationSeconds": 1611,
+        "conceptIds": [
+            "cd-attributes"
+        ],
+        "coverage": [
+            "Syntax-directed definitions",
+            "Synthesized and inherited attributes"
+        ],
+        "verificationStatus": "player-duration-observed-playback-unverified",
+        "verificationDate": "2026-11-27",
+        "playback": {
+            "watch": "unverified",
+            "embed": "unverified"
+        },
+        "evidence": {
+            "video": "https://www.youtube.com/watch?v=mEvuQkt6Idc",
+            "coverageSource": "SAKEC AY 2026–27 Semester V Compiler Design MSE syllabus, Module 3",
+            "duration": "https://www.youtube.com/watch?v=mEvuQkt6Idc",
+            "durationStatus": "duration-shown-by-embedded-youtube-player",
+            "embedAudit": "Player controls and runtime loaded; actual timestamp advancement was not observed."
+        }
+    },
+    {
+        "id": "cd-m3-l03",
+        "subjectId": "cd",
+        "moduleId": "cd-m3",
+        "syllabusRef": "3.2",
+        "title": "S-attributed and L-attributed definitions",
+        "educator": "Gate Smashers",
+        "videoId": "w03voSY4REs",
+        "watchUrl": "https://www.youtube.com/watch?v=w03voSY4REs",
+        "durationSeconds": 611,
+        "conceptIds": [
+            "cd-sdd-order"
+        ],
+        "coverage": [
+            "S-attributed definitions",
+            "L-attributed definitions"
+        ],
+        "verificationStatus": "player-duration-observed-playback-unverified",
+        "verificationDate": "2026-11-27",
+        "playback": {
+            "watch": "unverified",
+            "embed": "unverified"
+        },
+        "evidence": {
+            "video": "https://www.youtube.com/watch?v=w03voSY4REs",
+            "duration": "https://www.youtube.com/watch?v=w03voSY4REs",
+            "coverageSource": "SAKEC AY 2026–27 Semester V Compiler Design MSE syllabus, Module 3",
+            "durationStatus": "duration-shown-by-embedded-youtube-player",
+            "embedAudit": "Player controls and runtime loaded; actual timestamp advancement was not observed."
+        }
+    },
+    {
+        "id": "cd-m3-l04",
+        "subjectId": "cd",
+        "moduleId": "cd-m3",
+        "syllabusRef": "3.2",
+        "title": "SDD evaluation order: dependency graph example",
+        "educator": "Sundeep Saradhi Kanthety",
+        "videoId": "xnQfcZWCvJI",
+        "watchUrl": "https://www.youtube.com/watch?v=xnQfcZWCvJI",
+        "durationSeconds": 935,
+        "conceptIds": [
+            "cd-sdd-order"
+        ],
+        "coverage": [
+            "Attribute dependency graph",
+            "Topological evaluation order"
+        ],
+        "verificationStatus": "player-duration-observed-playback-unverified",
+        "verificationDate": "2026-11-27",
+        "playback": {
+            "watch": "unverified",
+            "embed": "unverified"
+        },
+        "evidence": {
+            "video": "https://www.youtube.com/watch?v=xnQfcZWCvJI",
+            "coverageSource": "SAKEC AY 2026–27 Semester V Compiler Design MSE syllabus, Module 3",
+            "duration": "https://www.youtube.com/watch?v=xnQfcZWCvJI",
+            "durationStatus": "duration-shown-by-embedded-youtube-player",
+            "watchAudit": "Signed-out watch page loaded; pre-roll clock did not advance to lecture content.",
+            "embedAudit": "Player controls and runtime loaded; actual timestamp advancement was not observed."
+        }
+    },
+    {
+        "id": "cd-m3-l05",
+        "subjectId": "cd",
+        "moduleId": "cd-m3",
+        "syllabusRef": "3.3",
+        "title": "Intermediate code: syntax trees and postfix notation",
+        "educator": "University Academy",
+        "videoId": "4XwgPnDCpqo",
+        "watchUrl": "https://www.youtube.com/watch?v=4XwgPnDCpqo",
+        "durationSeconds": 798,
+        "conceptIds": [
+            "cd-syntax-ir"
+        ],
+        "coverage": [
+            "Intermediate code generation",
+            "Syntax trees",
+            "Postfix notation"
+        ],
+        "verificationStatus": "player-duration-observed-playback-unverified",
+        "verificationDate": "2026-11-27",
+        "playback": {
+            "watch": "unverified",
+            "embed": "unverified"
+        },
+        "evidence": {
+            "video": "https://www.youtube.com/watch?v=4XwgPnDCpqo",
+            "coverageSource": "SAKEC AY 2026–27 Semester V Compiler Design MSE syllabus, Module 3",
+            "duration": "https://www.youtube.com/watch?v=4XwgPnDCpqo",
+            "durationStatus": "duration-shown-by-embedded-youtube-player",
+            "embedAudit": "Player controls and runtime loaded; actual timestamp advancement was not observed."
+        }
+    },
+    {
+        "id": "cd-m3-l06",
+        "subjectId": "cd",
+        "moduleId": "cd-m3",
+        "syllabusRef": "3.3",
+        "title": "Expression DAGs with examples",
+        "educator": "Sundeep Saradhi Kanthety",
+        "videoId": "g0N4hWd7BpE",
+        "watchUrl": "https://www.youtube.com/watch?v=g0N4hWd7BpE",
+        "durationSeconds": 824,
+        "conceptIds": [
+            "cd-syntax-ir"
+        ],
+        "coverage": [
+            "DAG construction",
+            "Repeated subexpressions"
+        ],
+        "verificationStatus": "player-duration-observed-playback-unverified",
+        "verificationDate": "2026-11-27",
+        "playback": {
+            "watch": "unverified",
+            "embed": "unverified"
+        },
+        "evidence": {
+            "video": "https://www.youtube.com/watch?v=g0N4hWd7BpE",
+            "coverageSource": "SAKEC AY 2026–27 Semester V Compiler Design MSE syllabus, Module 3",
+            "duration": "https://www.youtube.com/watch?v=g0N4hWd7BpE",
+            "durationStatus": "duration-shown-by-embedded-youtube-player",
+            "embedAudit": "Player controls and runtime loaded; actual timestamp advancement was not observed."
+        }
+    },
+    {
+        "id": "cd-m3-l07",
+        "subjectId": "cd",
+        "moduleId": "cd-m3",
+        "syllabusRef": "3.3",
+        "title": "Three-address code",
+        "educator": "Gate Smashers",
+        "videoId": "tJUYVGDn0JE",
+        "watchUrl": "https://www.youtube.com/watch?v=tJUYVGDn0JE",
+        "durationSeconds": 316,
+        "conceptIds": [
+            "cd-tac"
+        ],
+        "coverage": [
+            "Three-address instructions",
+            "Temporaries"
+        ],
+        "verificationStatus": "player-duration-observed-playback-unverified",
+        "verificationDate": "2026-11-27",
+        "playback": {
+            "watch": "unverified",
+            "embed": "unverified"
+        },
+        "evidence": {
+            "video": "https://www.youtube.com/watch?v=tJUYVGDn0JE",
+            "duration": "https://www.youtube.com/watch?v=tJUYVGDn0JE",
+            "coverageSource": "SAKEC AY 2026–27 Semester V Compiler Design MSE syllabus, Module 3",
+            "durationStatus": "duration-shown-by-embedded-youtube-player",
+            "embedAudit": "Player controls and runtime loaded; actual timestamp advancement was not observed."
+        }
+    },
+    {
+        "id": "cd-m3-l08",
+        "subjectId": "cd",
+        "moduleId": "cd-m3",
+        "syllabusRef": "3.3",
+        "title": "Quadruples, triples and indirect triples",
+        "educator": "Sundeep Saradhi Kanthety",
+        "videoId": "sp9wiCgar_I",
+        "watchUrl": "https://www.youtube.com/watch?v=sp9wiCgar_I",
+        "durationSeconds": 813,
+        "conceptIds": [
+            "cd-reps"
+        ],
+        "coverage": [
+            "Quadruples",
+            "Triples",
+            "Indirect triples"
+        ],
+        "verificationStatus": "player-duration-observed-playback-unverified",
+        "verificationDate": "2026-11-27",
+        "playback": {
+            "watch": "unverified",
+            "embed": "unverified"
+        },
+        "evidence": {
+            "video": "https://www.youtube.com/watch?v=sp9wiCgar_I",
+            "coverageSource": "SAKEC AY 2026–27 Semester V Compiler Design MSE syllabus, Module 3",
+            "duration": "https://www.youtube.com/watch?v=sp9wiCgar_I",
+            "durationStatus": "duration-shown-by-embedded-youtube-player",
+            "embedAudit": "Player controls and runtime loaded; actual timestamp advancement was not observed."
+        }
+    },
+    {
         "id": "cd-m2-l01",
         "subjectId": "cd",
         "moduleId": "cd-m2",
